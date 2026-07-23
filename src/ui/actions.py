@@ -32,4 +32,3 @@ async def send_json_export(data: dict[str, object]) -> None:
         mime="application/json",
     )
     await cl.Message(content="Your memory export is ready.", elements=[element]).send()
-

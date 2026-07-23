@@ -107,4 +107,3 @@ class ADAuthenticator:
                 )
         except LDAPException:
             return None
-

@@ -88,9 +88,7 @@ class MemoryRepository(Protocol):
         limit: int,
     ) -> list[MemoryRecord]: ...
 
-    async def mark_used(
-        self, user_identifier: str, memory_ids: list[UUID]
-    ) -> None: ...
+    async def mark_used(self, user_identifier: str, memory_ids: list[UUID]) -> None: ...
 
 
 class PostgresMemoryRepository:
@@ -289,7 +287,7 @@ class PostgresMemoryRepository:
             memory_id,
             vector,
         )
-        return result == "UPDATE 1"
+        return bool(result == "UPDATE 1")
 
     async def semantic_active(
         self,
@@ -334,9 +332,7 @@ class PostgresMemoryRepository:
         )
         return [_record(row) for row in rows]
 
-    async def mark_used(
-        self, user_identifier: str, memory_ids: list[UUID]
-    ) -> None:
+    async def mark_used(self, user_identifier: str, memory_ids: list[UUID]) -> None:
         if not memory_ids:
             return
         await self._pool.execute(

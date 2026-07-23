@@ -76,11 +76,14 @@ async def test_thread_memory_does_not_cross_threads(
         expires_at=None,
         max_items=500,
     )
-    assert len(
-        await repository.list_active(
-            user, scope=MemoryScope.THREAD, thread_id="thread-a"
+    assert (
+        len(
+            await repository.list_active(
+                user, scope=MemoryScope.THREAD, thread_id="thread-a"
+            )
         )
-    ) == 1
+        == 1
+    )
     assert (
         await repository.list_active(
             user, scope=MemoryScope.THREAD, thread_id="thread-b"

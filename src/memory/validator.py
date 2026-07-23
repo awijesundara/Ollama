@@ -30,9 +30,7 @@ _TEMPORARY = re.compile(
     r"\b(?:just for today|only today|temporary incident|one[- ]time issue)\b",
     re.I,
 )
-_LOG_LINE = re.compile(
-    r"(?m)^(?:\d{4}-\d{2}-\d{2}[T ]|\[[A-Z]+\]|[A-Z]+:\s)"
-)
+_LOG_LINE = re.compile(r"(?m)^(?:\d{4}-\d{2}-\d{2}[T ]|\[[A-Z]+\]|[A-Z]+:\s)")
 _SENSITIVE_AUTOMATIC = re.compile(
     r"\b(?:medical|diagnosis|health condition|salary|performance review|"
     r"human resources|hr complaint|legal dispute|disciplinary)\b",

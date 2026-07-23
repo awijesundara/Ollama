@@ -3,8 +3,8 @@ import asyncio
 from src.chat.summarizer import ThreadSummarizer, ThreadSummaryRepository
 from src.config import Settings, get_settings
 from src.database.connection import Database
-from src.memory.extractor import MemoryExtractor
 from src.memory.conflicts import ConflictDetector
+from src.memory.extractor import MemoryExtractor
 from src.memory.repository import PostgresMemoryRepository
 from src.memory.retriever import MemoryRetriever
 from src.memory.service import MemoryService

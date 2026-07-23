@@ -14,4 +14,3 @@ def test_rebuild_history_skips_malformed_steps_and_limits_messages() -> None:
         ("assistant", "answer"),
         ("user", "new"),
     ]
-

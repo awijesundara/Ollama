@@ -1,5 +1,5 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 import asyncpg
 
@@ -42,4 +42,3 @@ class Database:
         async with self.pool.acquire() as connection:
             async with connection.transaction():
                 yield connection
-

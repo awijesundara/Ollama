@@ -1,2 +1,1 @@
 """Database lifecycle and repositories."""
-

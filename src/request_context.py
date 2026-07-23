@@ -10,8 +10,8 @@ class RequestContext:
     user_hash: str = ""
 
 
-_context: contextvars.ContextVar[RequestContext] = contextvars.ContextVar(
-    "request_context", default=RequestContext()
+_context: contextvars.ContextVar[RequestContext | None] = contextvars.ContextVar(
+    "request_context", default=None
 )
 
 
@@ -23,9 +23,8 @@ def bind_context(
 
 class RequestContextFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        current = _context.get()
+        current = _context.get() or RequestContext()
         record.correlation_id = current.correlation_id
         record.thread_id = current.thread_id
         record.user_hash = current.user_hash
         return True
-

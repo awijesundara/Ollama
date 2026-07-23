@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 from src.auth.identity import AuthenticatedIdentity
 from src.memory.conflicts import ConflictDetector
 from src.memory.models import (
@@ -11,7 +13,6 @@ from src.memory.validator import MemoryValidationError
 from src.ollama.client import OllamaService
 from src.ollama.models import ChatMessage
 from src.security.audit import AuditEvent, AuditRepository
-
 
 EXTRACTION_POLICY = """Extract only durable user-provided preferences, role
 information, regular technical environment details, long-term project decisions,
@@ -76,8 +77,7 @@ class MemoryExtractor:
                 confidence=candidate.confidence,
                 source=MemorySource.AUTOMATIC,
                 source_message_id=source_message_id,
-                expires_at=datetime.now(UTC)
-                + timedelta(days=self._retention_days),
+                expires_at=datetime.now(UTC) + timedelta(days=self._retention_days),
             )
             try:
                 if self._conflicts:
@@ -120,4 +120,3 @@ class MemoryExtractor:
             except RuntimeError:
                 continue
         return saved
-from datetime import UTC, datetime, timedelta
