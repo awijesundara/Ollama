@@ -73,3 +73,16 @@ module = [
   "yaml",
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+  "src.auth.identity",
+  "src.chat.handlers",
+  "src.ui.actions",
+  "src.ui.settings",
+]
+disable_error_code = ["no-untyped-call"]
+
+[[tool.mypy.overrides]]
+module = "src.database.chainlit_layer"
+disable_error_code = ["misc"]

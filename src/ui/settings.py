@@ -1,3 +1,5 @@
+from typing import Any
+
 import chainlit as cl
 from chainlit.input_widget import Switch
 
@@ -5,30 +7,29 @@ from src.memory.models import MemoryPreferences
 
 
 async def send_memory_settings(preferences: MemoryPreferences) -> None:
-    await cl.ChatSettings(
-        [
-            Switch(
-                id="memory_enabled",
-                label="Use saved memory",
-                initial=preferences.memory_enabled,
-            ),
-            Switch(
-                id="automatic_memory_enabled",
-                label="Automatically save durable facts",
-                initial=preferences.automatic_memory_enabled,
-            ),
-            Switch(
-                id="allow_global_memory",
-                label="Allow global memory",
-                initial=preferences.allow_global_memory,
-            ),
-            Switch(
-                id="allow_thread_memory",
-                label="Allow chat memory",
-                initial=preferences.allow_thread_memory,
-            ),
-        ]
-    ).send()
+    inputs: list[Any] = [
+        Switch(
+            id="memory_enabled",
+            label="Use saved memory",
+            initial=preferences.memory_enabled,
+        ),
+        Switch(
+            id="automatic_memory_enabled",
+            label="Automatically save durable facts",
+            initial=preferences.automatic_memory_enabled,
+        ),
+        Switch(
+            id="allow_global_memory",
+            label="Allow global memory",
+            initial=preferences.allow_global_memory,
+        ),
+        Switch(
+            id="allow_thread_memory",
+            label="Allow chat memory",
+            initial=preferences.allow_thread_memory,
+        ),
+    ]
+    await cl.ChatSettings(inputs).send()
 
 
 def memory_actions() -> list[cl.Action]:
