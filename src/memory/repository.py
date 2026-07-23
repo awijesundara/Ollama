@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -39,6 +40,7 @@ class MemoryRepository(Protocol):
         confidence: float,
         source: MemorySource,
         source_message_id: str | None,
+        expires_at: datetime | None,
         max_items: int,
     ) -> MemoryRecord: ...
 
@@ -52,6 +54,10 @@ class MemoryRepository(Protocol):
     ) -> list[MemoryRecord]: ...
 
     async def delete(self, user_identifier: str, memory_id: UUID) -> bool: ...
+
+    async def resolve_id_prefix(
+        self, user_identifier: str, memory_id_prefix: str
+    ) -> UUID | None: ...
 
     async def delete_all(
         self,
@@ -68,6 +74,23 @@ class MemoryRepository(Protocol):
         user_identifier: str,
         update: MemoryPreferenceUpdate,
     ) -> MemoryPreferences: ...
+
+    async def set_embedding(
+        self, user_identifier: str, memory_id: UUID, embedding: list[float]
+    ) -> bool: ...
+
+    async def semantic_active(
+        self,
+        user_identifier: str,
+        thread_id: str,
+        embedding: list[float],
+        similarity_threshold: float,
+        limit: int,
+    ) -> list[MemoryRecord]: ...
+
+    async def mark_used(
+        self, user_identifier: str, memory_ids: list[UUID]
+    ) -> None: ...
 
 
 class PostgresMemoryRepository:
@@ -88,10 +111,13 @@ class PostgresMemoryRepository:
         confidence: float,
         source: MemorySource,
         source_message_id: str | None,
+        expires_at: datetime | None,
         max_items: int,
     ) -> MemoryRecord:
         query = """
-            WITH item_count AS (
+            WITH user_lock AS (
+                SELECT pg_advisory_xact_lock(hashtextextended($1, 0))
+            ), item_count AS (
                 SELECT count(*) AS count
                 FROM user_memories
                 WHERE user_identifier = $1 AND deleted_at IS NULL
@@ -99,14 +125,14 @@ class PostgresMemoryRepository:
             INSERT INTO user_memories (
                 user_identifier, scope, thread_id, category, memory_text,
                 normalized_text, normalized_hash, importance, confidence,
-                source, source_message_id
+                source, source_message_id, expires_at
             )
-            SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-            FROM item_count
-            WHERE item_count.count < $12
+            SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+            FROM item_count CROSS JOIN user_lock
+            WHERE item_count.count < $13
             RETURNING id, user_identifier, memory_text AS text, scope, thread_id,
                       category, importance, confidence::float8 AS confidence,
-                      source, created_at, updated_at
+                      source, created_at, updated_at, expires_at
         """
         try:
             row = await self._pool.fetchrow(
@@ -122,6 +148,7 @@ class PostgresMemoryRepository:
                 confidence,
                 source.value,
                 source_message_id,
+                expires_at,
                 max_items,
             )
         except asyncpg.UniqueViolationError as error:
@@ -141,7 +168,7 @@ class PostgresMemoryRepository:
         query = """
             SELECT id, user_identifier, memory_text AS text, scope, thread_id,
                    category, importance, confidence::float8 AS confidence,
-                   source, created_at, updated_at
+                   source, created_at, updated_at, expires_at
             FROM user_memories
             WHERE user_identifier = $1
               AND deleted_at IS NULL
@@ -170,6 +197,23 @@ class PostgresMemoryRepository:
             user_identifier,
         )
         return bool(result == "UPDATE 1")
+
+    async def resolve_id_prefix(
+        self, user_identifier: str, memory_id_prefix: str
+    ) -> UUID | None:
+        if not 8 <= len(memory_id_prefix) <= 36:
+            return None
+        rows = await self._pool.fetch(
+            """
+            SELECT id FROM user_memories
+            WHERE user_identifier = $1 AND deleted_at IS NULL
+              AND id::text LIKE $2
+            LIMIT 2
+            """,
+            user_identifier,
+            f"{memory_id_prefix.lower()}%",
+        )
+        return rows[0]["id"] if len(rows) == 1 else None
 
     async def delete_all(
         self,
@@ -231,6 +275,79 @@ class PostgresMemoryRepository:
         if row is None:
             raise RepositoryError("Preference update returned no row")
         return MemoryPreferences.model_validate(dict(row))
+
+    async def set_embedding(
+        self, user_identifier: str, memory_id: UUID, embedding: list[float]
+    ) -> bool:
+        vector = "[" + ",".join(str(value) for value in embedding) + "]"
+        result = await self._pool.execute(
+            """
+            UPDATE user_memories SET embedding = $3::vector, updated_at = NOW()
+            WHERE user_identifier = $1 AND id = $2 AND deleted_at IS NULL
+            """,
+            user_identifier,
+            memory_id,
+            vector,
+        )
+        return result == "UPDATE 1"
+
+    async def semantic_active(
+        self,
+        user_identifier: str,
+        thread_id: str,
+        embedding: list[float],
+        similarity_threshold: float,
+        limit: int,
+    ) -> list[MemoryRecord]:
+        vector = "[" + ",".join(str(value) for value in embedding) + "]"
+        rows = await self._pool.fetch(
+            """
+            SELECT id, user_identifier, memory_text AS text, scope, thread_id,
+                   category, importance, confidence::float8 AS confidence,
+                   source, created_at, updated_at, expires_at
+            FROM user_memories
+            WHERE user_identifier = $1
+              AND (scope = 'global' OR (scope = 'thread' AND thread_id = $2))
+              AND deleted_at IS NULL
+              AND (expires_at IS NULL OR expires_at > NOW())
+              AND embedding IS NOT NULL
+              AND 1 - (embedding <=> $3::vector) >= $4
+            ORDER BY (
+                (1 - (embedding <=> $3::vector)) * 0.65
+                + (importance::float / 10) * 0.20
+                + GREATEST(
+                    0,
+                    1 - (
+                        EXTRACT(EPOCH FROM (NOW() - updated_at))
+                        / 31536000
+                    )
+                  ) * 0.10
+                + CASE WHEN source = 'explicit' THEN 0.05 ELSE 0 END
+            ) DESC, updated_at DESC
+            LIMIT $5
+            """,
+            user_identifier,
+            thread_id,
+            vector,
+            similarity_threshold,
+            limit,
+        )
+        return [_record(row) for row in rows]
+
+    async def mark_used(
+        self, user_identifier: str, memory_ids: list[UUID]
+    ) -> None:
+        if not memory_ids:
+            return
+        await self._pool.execute(
+            """
+            UPDATE user_memories SET last_used_at = NOW()
+            WHERE user_identifier = $1 AND id = ANY($2::uuid[])
+              AND deleted_at IS NULL
+            """,
+            user_identifier,
+            memory_ids,
+        )
 
 
 def _record(row: Sequence[object]) -> MemoryRecord:

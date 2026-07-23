@@ -1,8 +1,10 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 from src.auth.identity import AuthenticatedIdentity
 from src.memory.models import (
     MemoryCreate,
+    MemoryExport,
     MemoryPreferences,
     MemoryPreferenceUpdate,
     MemoryRecord,
@@ -54,6 +56,7 @@ class MemoryService:
             confidence=request.confidence,
             source=request.source,
             source_message_id=request.source_message_id,
+            expires_at=request.expires_at,
             max_items=self._max_items,
         )
 
@@ -86,6 +89,13 @@ class MemoryService:
             if preferences.allow_thread_memory
             else []
         )
+        await self._repository.mark_used(
+            identity.user_identifier,
+            [
+                item.id
+                for item in [*global_memories, *thread_memories]
+            ],
+        )
         return RetrievedMemory(
             global_memories=global_memories,
             thread_memories=thread_memories,
@@ -109,6 +119,18 @@ class MemoryService:
         memory_id: UUID,
     ) -> bool:
         return await self._repository.delete(identity.user_identifier, memory_id)
+
+    async def delete_memory_prefix(
+        self,
+        identity: AuthenticatedIdentity,
+        memory_id_prefix: str,
+    ) -> bool:
+        memory_id = await self._repository.resolve_id_prefix(
+            identity.user_identifier, memory_id_prefix
+        )
+        if memory_id is None:
+            return False
+        return await self.delete_memory(identity, memory_id)
 
     async def delete_all_global(self, identity: AuthenticatedIdentity) -> int:
         return await self._repository.delete_all(
@@ -136,4 +158,77 @@ class MemoryService:
         return await self._repository.update_preferences(
             identity.user_identifier,
             update,
+        )
+
+    async def get_preferences(
+        self, identity: AuthenticatedIdentity
+    ) -> MemoryPreferences:
+        return await self._repository.get_preferences(identity.user_identifier)
+
+    async def export_memories(
+        self, identity: AuthenticatedIdentity
+    ) -> MemoryExport:
+        return MemoryExport(
+            exported_at=datetime.now(UTC),
+            user_identifier=identity.user_identifier,
+            preferences=await self.get_preferences(identity),
+            memories=await self.list_memories(identity),
+        )
+
+    async def attach_embedding(
+        self,
+        identity: AuthenticatedIdentity,
+        memory_id: UUID,
+        embedding: list[float],
+    ) -> bool:
+        return await self._repository.set_embedding(
+            identity.user_identifier, memory_id, embedding
+        )
+
+    async def semantic_retrieve(
+        self,
+        identity: AuthenticatedIdentity,
+        thread_id: str,
+        embedding: list[float],
+        similarity_threshold: float,
+        limit: int,
+    ) -> RetrievedMemory:
+        preferences = await self._repository.get_preferences(
+            identity.user_identifier
+        )
+        if not preferences.memory_enabled:
+            return RetrievedMemory()
+        records = await self._repository.semantic_active(
+            identity.user_identifier,
+            thread_id,
+            embedding,
+            similarity_threshold,
+            limit,
+        )
+        allowed = [
+            record
+            for record in records
+            if (
+                record.scope is MemoryScope.GLOBAL
+                and preferences.allow_global_memory
+            )
+            or (
+                record.scope is MemoryScope.THREAD
+                and preferences.allow_thread_memory
+            )
+        ]
+        await self._repository.mark_used(
+            identity.user_identifier, [record.id for record in allowed]
+        )
+        return RetrievedMemory(
+            global_memories=[
+                record
+                for record in allowed
+                if record.scope is MemoryScope.GLOBAL
+            ],
+            thread_memories=[
+                record
+                for record in allowed
+                if record.scope is MemoryScope.THREAD
+            ],
         )

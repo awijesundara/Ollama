@@ -1,13 +1,14 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from src.chat.prompt_builder import build_system_prompt
+from src.chat.prompt_builder import build_system_prompt, select_recent_messages
 from src.memory.models import (
     MemoryRecord,
     MemoryScope,
     MemorySource,
     RetrievedMemory,
 )
+from src.ollama.models import ChatMessage
 
 
 def memory(text: str, scope: MemoryScope) -> MemoryRecord:
@@ -51,3 +52,15 @@ def test_enforces_estimated_token_budget() -> None:
     result = build_system_prompt(memories, token_budget=256)
     assert result.estimated_tokens <= 256
     assert result.included_memory_count < 50
+
+
+def test_recent_messages_drop_oldest_to_fit_budget() -> None:
+    selected = select_recent_messages(
+        [
+            ChatMessage(role="user", content="old " * 100),
+            ChatMessage(role="assistant", content="recent"),
+        ],
+        message_limit=20,
+        token_budget=20,
+    )
+    assert [item.content for item in selected] == ["recent"]

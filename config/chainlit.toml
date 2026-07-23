@@ -1,0 +1,20 @@
+[project]
+enable_telemetry = false
+user_env = []
+
+[features]
+unsafe_allow_html = false
+latex = true
+spontaneous_file_upload.enabled = false
+
+[features.chat_history]
+enabled = true
+
+[features.thread_sharing]
+enabled = false
+
+[UI]
+name = "Internal AI Assistant"
+default_theme = "light"
+cot = "hidden"
+

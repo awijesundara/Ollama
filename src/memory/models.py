@@ -25,6 +25,7 @@ class MemoryCreate(BaseModel):
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     source: MemorySource = MemorySource.EXPLICIT
     source_message_id: str | None = None
+    expires_at: datetime | None = None
 
     @model_validator(mode="after")
     def validate_scope(self) -> "MemoryCreate":
@@ -49,6 +50,7 @@ class MemoryRecord(BaseModel):
     source: MemorySource
     created_at: datetime
     updated_at: datetime
+    expires_at: datetime | None = None
 
 
 class MemoryPreferences(BaseModel):
@@ -69,3 +71,36 @@ class MemoryPreferenceUpdate(BaseModel):
 class RetrievedMemory(BaseModel):
     global_memories: list[MemoryRecord] = Field(default_factory=list)
     thread_memories: list[MemoryRecord] = Field(default_factory=list)
+
+
+class MemoryExport(BaseModel):
+    exported_at: datetime
+    user_identifier: str
+    preferences: MemoryPreferences
+    memories: list[MemoryRecord]
+
+
+class ExtractionCandidate(BaseModel):
+    save: bool
+    scope: MemoryScope
+    category: str = "general"
+    memory: str
+    importance: int = Field(ge=1, le=10)
+    confidence: float = Field(ge=0, le=1)
+    reason: str
+
+
+class ExtractionResult(BaseModel):
+    candidates: list[ExtractionCandidate] = Field(default_factory=list, max_length=20)
+
+
+class ConflictAssessment(BaseModel):
+    conflicts: bool
+    conflicting_memory_id: UUID | None = None
+    reason: str = ""
+
+    @model_validator(mode="after")
+    def require_id_for_conflict(self) -> "ConflictAssessment":
+        if self.conflicts and self.conflicting_memory_id is None:
+            raise ValueError("A conflicting memory ID is required")
+        return self
