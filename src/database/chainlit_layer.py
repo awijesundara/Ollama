@@ -6,7 +6,7 @@ from chainlit.step import StepDict
 from src.security.secret_detection import detect_secret
 
 
-class OwnershipCheckingDataLayer(SQLAlchemyDataLayer):  # type: ignore[misc]
+class OwnershipCheckingDataLayer(SQLAlchemyDataLayer):
     """Chainlit persistence plus explicit thread ownership verification."""
 
     async def create_step(self, step_dict: StepDict) -> None:
