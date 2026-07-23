@@ -12,6 +12,10 @@ _PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("bearer_token", re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{12,}", re.I)),
     ("authentication_header", re.compile(r"\bAuthorization\s*:", re.I)),
     ("cloud_access_key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
+    ("openai_api_key", re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b")),
+    ("github_token", re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b")),
+    ("slack_token", re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{20,}\b")),
+    ("google_api_key", re.compile(r"\bAIza[A-Za-z0-9_-]{30,}\b")),
     (
         "connection_string",
         re.compile(r"\b(?:postgres(?:ql)?|mysql)://[^:\s]+:[^@\s]+@"),

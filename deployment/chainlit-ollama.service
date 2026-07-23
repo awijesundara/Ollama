@@ -1,0 +1,33 @@
+[Unit]
+Description=Chainlit Ollama Memory Application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=chainlit
+Group=chainlit
+WorkingDirectory=/opt/chainlit-ollama-memory/current
+EnvironmentFile=/etc/chainlit-ollama-memory/app.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/chainlit-ollama-memory/venv/bin/chainlit run app.py --host 127.0.0.1 --port 8000
+StandardOutput=append:/var/log/chainlit-ollama-memory/application.log
+StandardError=append:/var/log/chainlit-ollama-memory/application.log
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/var/log/chainlit-ollama-memory
+
+[Install]
+WantedBy=multi-user.target

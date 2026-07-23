@@ -1,3 +1,4 @@
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -7,6 +8,16 @@ config = context.config
 if config.config_file_name:
     fileConfig(config.config_file_name)
 target_metadata = None
+
+arguments = context.get_x_argument(as_dictionary=True)
+database_url = arguments.get("database_url") or os.getenv("DATABASE_URL")
+if database_url:
+    config.set_main_option(
+        "sqlalchemy.url",
+        database_url.replace(
+            "postgresql+asyncpg://", "postgresql+psycopg://", 1
+        ).replace("postgresql://", "postgresql+psycopg://", 1),
+    )
 
 
 def run_migrations_offline() -> None:

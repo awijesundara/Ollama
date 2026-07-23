@@ -33,5 +33,15 @@ def identity_from_server_user(
     )
 
 
+def get_authenticated_identity() -> AuthenticatedIdentity:
+    """Resolve identity exclusively from Chainlit's authenticated server session."""
+    import chainlit as cl
+
+    user = cl.user_session.get("user")
+    if user is None:
+        raise AuthenticationError("Authenticated user is unavailable")
+    return identity_from_server_user(user.identifier, user.metadata)
+
+
 def _optional_string(value: Any) -> str | None:
     return value if isinstance(value, str) else None

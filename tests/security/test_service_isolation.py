@@ -42,6 +42,7 @@ class FakeRepository:
             source=values["source"],
             created_at=now,
             updated_at=now,
+            expires_at=values.get("expires_at"),
         )
         self.records[record.id] = record
         return record
@@ -103,6 +104,12 @@ class FakeRepository:
             user_identifier=user_identifier,
             **update.model_dump(exclude_none=True),
         )
+
+    async def mark_used(
+        self, user_identifier: str, memory_ids: list[UUID]
+    ) -> None:
+        self.seen_owners.append(user_identifier)
+
 
 
 @pytest.mark.asyncio

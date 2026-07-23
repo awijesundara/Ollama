@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from xml.sax.saxutils import escape
 
 from src.memory.models import RetrievedMemory
+from src.ollama.models import ChatMessage
 
 BASE_POLICY = """You are an internal technical assistant.
 Follow the application system policy.
@@ -62,6 +63,24 @@ def build_system_prompt(
 def estimate_tokens(text: str) -> int:
     """Conservative dependency-free approximation used for budget trimming."""
     return (len(text) + 3) // 4
+
+
+def select_recent_messages(
+    messages: list[ChatMessage],
+    *,
+    message_limit: int,
+    token_budget: int,
+) -> list[ChatMessage]:
+    selected: list[ChatMessage] = []
+    used = 0
+    for message in reversed(messages[-message_limit:]):
+        cost = estimate_tokens(message.content) + 4
+        if used + cost > token_budget:
+            continue
+        selected.append(message)
+        used += cost
+    selected.reverse()
+    return selected
 
 
 def _render(parts: list[str], groups: dict[str, list[str]]) -> str:
