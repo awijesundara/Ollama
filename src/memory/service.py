@@ -91,10 +91,7 @@ class MemoryService:
         )
         await self._repository.mark_used(
             identity.user_identifier,
-            [
-                item.id
-                for item in [*global_memories, *thread_memories]
-            ],
+            [item.id for item in [*global_memories, *thread_memories]],
         )
         return RetrievedMemory(
             global_memories=global_memories,
@@ -165,9 +162,7 @@ class MemoryService:
     ) -> MemoryPreferences:
         return await self._repository.get_preferences(identity.user_identifier)
 
-    async def export_memories(
-        self, identity: AuthenticatedIdentity
-    ) -> MemoryExport:
+    async def export_memories(self, identity: AuthenticatedIdentity) -> MemoryExport:
         return MemoryExport(
             exported_at=datetime.now(UTC),
             user_identifier=identity.user_identifier,
@@ -193,9 +188,7 @@ class MemoryService:
         similarity_threshold: float,
         limit: int,
     ) -> RetrievedMemory:
-        preferences = await self._repository.get_preferences(
-            identity.user_identifier
-        )
+        preferences = await self._repository.get_preferences(identity.user_identifier)
         if not preferences.memory_enabled:
             return RetrievedMemory()
         records = await self._repository.semantic_active(
@@ -208,27 +201,17 @@ class MemoryService:
         allowed = [
             record
             for record in records
-            if (
-                record.scope is MemoryScope.GLOBAL
-                and preferences.allow_global_memory
-            )
-            or (
-                record.scope is MemoryScope.THREAD
-                and preferences.allow_thread_memory
-            )
+            if (record.scope is MemoryScope.GLOBAL and preferences.allow_global_memory)
+            or (record.scope is MemoryScope.THREAD and preferences.allow_thread_memory)
         ]
         await self._repository.mark_used(
             identity.user_identifier, [record.id for record in allowed]
         )
         return RetrievedMemory(
             global_memories=[
-                record
-                for record in allowed
-                if record.scope is MemoryScope.GLOBAL
+                record for record in allowed if record.scope is MemoryScope.GLOBAL
             ],
             thread_memories=[
-                record
-                for record in allowed
-                if record.scope is MemoryScope.THREAD
+                record for record in allowed if record.scope is MemoryScope.THREAD
             ],
         )

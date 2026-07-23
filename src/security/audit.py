@@ -57,4 +57,3 @@ class AuditRepository:
             retention_days,
         )
         return int(result.rsplit(" ", 1)[-1])
-

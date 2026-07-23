@@ -21,4 +21,3 @@ def test_extraction_schema_rejects_out_of_range_values() -> None:
                 ]
             }
         )
-

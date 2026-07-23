@@ -36,9 +36,7 @@ class OllamaService:
     async def close(self) -> None:
         await self._client.aclose()
 
-    async def stream_chat(
-        self, messages: list[ChatMessage]
-    ) -> AsyncIterator[str]:
+    async def stream_chat(self, messages: list[ChatMessage]) -> AsyncIterator[str]:
         payload = {
             "model": self._chat_model,
             "messages": [message.model_dump() for message in messages],
@@ -47,7 +45,9 @@ class OllamaService:
         started = time.monotonic()
         status = "success"
         try:
-            async with self._client.stream("POST", "/api/chat", json=payload) as response:
+            async with self._client.stream(
+                "POST", "/api/chat", json=payload
+            ) as response:
                 await self._raise_for_status(response)
                 async for line in response.aiter_lines():
                     if not line.strip():
@@ -105,7 +105,7 @@ class OllamaService:
     async def health_check(self) -> bool:
         try:
             response = await self._client.get("/api/tags")
-            return response.status_code == 200
+            return bool(response.status_code == 200)
         except httpx.RequestError:
             return False
 

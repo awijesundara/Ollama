@@ -23,4 +23,3 @@ class ConversationState(BaseModel):
     thread_id: str
     messages: list[ChatMessage] = Field(default_factory=list)
     summary: ThreadSummary | None = None
-

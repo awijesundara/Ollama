@@ -116,4 +116,3 @@ def downgrade() -> None:
     op.execute("DROP TABLE IF EXISTS steps")
     op.execute("DROP TABLE IF EXISTS threads")
     op.execute("DROP TABLE IF EXISTS users")
-

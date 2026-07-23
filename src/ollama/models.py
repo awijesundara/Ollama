@@ -18,4 +18,3 @@ class OllamaModelNotFoundError(RuntimeError):
 
 class OllamaResponseError(RuntimeError):
     pass
-

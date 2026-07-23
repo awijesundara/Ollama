@@ -22,9 +22,7 @@ class ConflictDetector:
         )
         if not existing:
             return ConflictAssessment(conflicts=False)
-        catalog = "\n".join(
-            f"{item.id}: {item.text}" for item in existing[:100]
-        )
+        catalog = "\n".join(f"{item.id}: {item.text}" for item in existing[:100])
         prompt = (
             "Determine whether the proposed memory directly contradicts exactly "
             "one existing memory. Related or additive facts are not conflicts. "
@@ -42,4 +40,3 @@ class ConflictDetector:
         if result.conflicting_memory_id not in valid_ids:
             return ConflictAssessment(conflicts=False)
         return result
-

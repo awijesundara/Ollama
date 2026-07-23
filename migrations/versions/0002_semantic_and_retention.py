@@ -29,9 +29,7 @@ def upgrade() -> None:
         "CREATE INDEX idx_memory_expiry ON user_memories (expires_at) "
         "WHERE expires_at IS NOT NULL AND deleted_at IS NULL"
     )
-    op.execute(
-        "CREATE INDEX idx_audit_retention ON memory_audit_events (created_at)"
-    )
+    op.execute("CREATE INDEX idx_audit_retention ON memory_audit_events (created_at)")
 
 
 def downgrade() -> None:
@@ -39,4 +37,3 @@ def downgrade() -> None:
     op.execute("DROP INDEX IF EXISTS idx_memory_expiry")
     op.execute("DROP INDEX IF EXISTS idx_user_memories_embedding")
     op.execute("ALTER TABLE user_memories DROP COLUMN IF EXISTS embedding")
-

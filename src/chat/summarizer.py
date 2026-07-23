@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 import asyncpg
 
@@ -12,9 +12,7 @@ class ThreadSummaryRepository:
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
 
-    async def get(
-        self, user_identifier: str, thread_id: str
-    ) -> ThreadSummary | None:
+    async def get(self, user_identifier: str, thread_id: str) -> ThreadSummary | None:
         row = await self._pool.fetchrow(
             """
             SELECT * FROM thread_summaries

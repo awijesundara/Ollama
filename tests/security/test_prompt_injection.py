@@ -23,4 +23,3 @@ def test_automatic_prompt_injection_is_rejected(payload: str) -> None:
                 source=MemorySource.AUTOMATIC,
             )
         )
-

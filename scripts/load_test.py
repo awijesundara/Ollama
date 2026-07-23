@@ -61,4 +61,3 @@ if __name__ == "__main__":
     parser.add_argument("--requests", type=int, default=100)
     arguments = parser.parse_args()
     asyncio.run(main(arguments.concurrency, arguments.requests))
-

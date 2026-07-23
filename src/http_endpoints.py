@@ -6,7 +6,9 @@ from src.runtime import services
 
 
 def register_http_endpoints(app: object) -> None:
-    @app.get("/healthz", include_in_schema=False)  # type: ignore[attr-defined]
+    @app.get(  # type: ignore[attr-defined,untyped-decorator]
+        "/healthz", include_in_schema=False
+    )
     async def health() -> Response:
         try:
             await services.start()
@@ -24,6 +26,8 @@ def register_http_endpoints(app: object) -> None:
             else status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-    @app.get("/metrics", include_in_schema=False)  # type: ignore[attr-defined]
+    @app.get(  # type: ignore[attr-defined,untyped-decorator]
+        "/metrics", include_in_schema=False
+    )
     async def metrics() -> Response:
         return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)

@@ -13,8 +13,8 @@ from src.auth.ad_auth import (
 from src.chat import handlers
 from src.config import get_settings
 from src.database.chainlit_layer import create_chainlit_data_layer
-from src.logging_config import configure_logging
 from src.http_endpoints import register_http_endpoints
+from src.logging_config import configure_logging
 from src.memory.models import MemoryScope
 from src.monitoring import ACTIVE_SESSIONS
 

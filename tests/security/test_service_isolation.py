@@ -105,11 +105,8 @@ class FakeRepository:
             **update.model_dump(exclude_none=True),
         )
 
-    async def mark_used(
-        self, user_identifier: str, memory_ids: list[UUID]
-    ) -> None:
+    async def mark_used(self, user_identifier: str, memory_ids: list[UUID]) -> None:
         self.seen_owners.append(user_identifier)
-
 
 
 @pytest.mark.asyncio

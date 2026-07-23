@@ -6,7 +6,7 @@ from chainlit.step import StepDict
 from src.security.secret_detection import detect_secret
 
 
-class OwnershipCheckingDataLayer(SQLAlchemyDataLayer):
+class OwnershipCheckingDataLayer(SQLAlchemyDataLayer):  # type: ignore[misc]
     """Chainlit persistence plus explicit thread ownership verification."""
 
     async def create_step(self, step_dict: StepDict) -> None:
@@ -38,7 +38,5 @@ class OwnershipCheckingDataLayer(SQLAlchemyDataLayer):
 
 
 def create_chainlit_data_layer(database_url: str) -> OwnershipCheckingDataLayer:
-    conninfo = database_url.replace(
-        "postgresql://", "postgresql+asyncpg://", 1
-    )
+    conninfo = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     return OwnershipCheckingDataLayer(conninfo=conninfo)

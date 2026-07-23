@@ -33,10 +33,9 @@ from src.ollama.models import (
     OllamaModelNotFoundError,
     OllamaUnavailableError,
 )
-from src.runtime import services
 from src.request_context import bind_context
-from src.security.audit import AuditEvent
-from src.security.audit import hash_user_identifier
+from src.runtime import services
+from src.security.audit import AuditEvent, hash_user_identifier
 from src.security.secret_detection import detect_secret
 from src.ui.actions import confirm_destructive_action, send_json_export
 from src.ui.settings import memory_actions, send_memory_settings
@@ -138,9 +137,7 @@ async def on_message(message: cl.Message) -> None:
         identity, state.thread_id, message.content
     )
     MEMORY_READS.inc()
-    if services.audit and (
-        retrieved.global_memories or retrieved.thread_memories
-    ):
+    if services.audit and (retrieved.global_memories or retrieved.thread_memories):
         await services.audit.record(
             AuditEvent(
                 user_identifier=identity.user_identifier,
@@ -153,9 +150,7 @@ async def on_message(message: cl.Message) -> None:
             )
         )
     summary_text = state.summary.summary_text if state.summary else None
-    memory_budget = max(
-        128, min(2048, services.settings.OLLAMA_CONTEXT_LENGTH // 4)
-    )
+    memory_budget = max(128, min(2048, services.settings.OLLAMA_CONTEXT_LENGTH // 4))
     recent_token_budget = max(
         0,
         services.settings.OLLAMA_CONTEXT_LENGTH
@@ -185,7 +180,9 @@ async def on_message(message: cl.Message) -> None:
             await response.stream_token(token)
         await response.update()
     except OllamaModelNotFoundError:
-        response.content = "The configured model is unavailable. Contact an administrator."
+        response.content = (
+            "The configured model is unavailable. Contact an administrator."
+        )
         await response.update()
         return
     except OllamaUnavailableError:
@@ -224,9 +221,7 @@ async def on_settings_update(settings: dict[str, Any]) -> None:
         return
     update = MemoryPreferenceUpdate(
         memory_enabled=bool(settings.get("memory_enabled", True)),
-        automatic_memory_enabled=bool(
-            settings.get("automatic_memory_enabled", False)
-        ),
+        automatic_memory_enabled=bool(settings.get("automatic_memory_enabled", False)),
         allow_global_memory=bool(settings.get("allow_global_memory", True)),
         allow_thread_memory=bool(settings.get("allow_thread_memory", True)),
     )
@@ -314,7 +309,9 @@ async def disable_memory() -> None:
                 operation="disable",
             )
         )
-    await cl.Message(content="Memory retrieval is disabled. Stored items remain.").send()
+    await cl.Message(
+        content="Memory retrieval is disabled. Stored items remain."
+    ).send()
 
 
 async def add_memory_interactive(scope: MemoryScope) -> None:
@@ -323,11 +320,7 @@ async def add_memory_interactive(scope: MemoryScope) -> None:
     ).send()
     if not response or not isinstance(response.get("output"), str):
         return
-    command = (
-        "/remember-chat "
-        if scope is MemoryScope.THREAD
-        else "/remember-global "
-    )
+    command = "/remember-chat " if scope is MemoryScope.THREAD else "/remember-global "
     try:
         await _handle_memory_command(command + response["output"], None)
     except MemoryValidationError:
@@ -364,9 +357,7 @@ async def _handle_memory_command(text: str, message_id: str | None) -> bool:
             text=command.argument,
             scope=command.scope,
             thread_id=(
-                state.thread_id
-                if command.scope is MemoryScope.THREAD
-                else None
+                state.thread_id if command.scope is MemoryScope.THREAD else None
             ),
             source=MemorySource.EXPLICIT,
             source_message_id=message_id,
@@ -383,9 +374,7 @@ async def _handle_memory_command(text: str, message_id: str | None) -> bool:
             if not confirmed:
                 await cl.Message(content="The new memory was not saved.").send()
                 return True
-            await service.delete_memory(
-                identity, conflict.conflicting_memory_id
-            )
+            await service.delete_memory(identity, conflict.conflicting_memory_id)
         record = await service.create_memory(identity, request)
         MEMORY_CREATES.labels(source=record.source.value).inc()
         if services.audit:
@@ -405,7 +394,9 @@ async def _handle_memory_command(text: str, message_id: str | None) -> bool:
                 if len(embedding) == services.settings.MEMORY_EMBEDDING_DIMENSIONS:
                     await service.attach_embedding(identity, record.id, embedding)
             except RuntimeError:
-                logger.warning("memory_embedding_failed", extra={"memory_id": record.id})
+                logger.warning(
+                    "memory_embedding_failed", extra={"memory_id": record.id}
+                )
         await cl.Message(
             content=f"Saved {record.scope.value} memory `{str(record.id)[:8]}`."
         ).send()
@@ -426,7 +417,9 @@ async def _handle_memory_command(text: str, message_id: str | None) -> bool:
                 )
             )
         await cl.Message(
-            content="Memory deleted." if deleted else "Memory not found or ID is ambiguous."
+            content="Memory deleted."
+            if deleted
+            else "Memory not found or ID is ambiguous."
         ).send()
     elif command.kind is CommandKind.FORGET_ALL_GLOBAL:
         await clear_global_memories()
@@ -478,7 +471,10 @@ def _state() -> ConversationState:
 def _format_memories(memories: list[Any]) -> str:
     if not memories:
         return "No active memories."
-    lines = ["| ID | Scope | Category | Created | Source | Memory |", "|---|---|---|---|---|---|"]
+    lines = [
+        "| ID | Scope | Category | Created | Source | Memory |",
+        "|---|---|---|---|---|---|",
+    ]
     for memory in memories:
         safe_text = memory.text.replace("|", "\\|").replace("\n", " ")
         lines.append(
