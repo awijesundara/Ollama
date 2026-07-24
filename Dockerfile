@@ -9,9 +9,11 @@ WORKDIR /app
 RUN groupadd --system app \
     && useradd --system --gid app --home-dir /app app
 
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md requirements.txt ./
+RUN python -m pip install --no-cache-dir -r requirements.txt
+
 COPY src ./src
-RUN python -m pip install --no-cache-dir .
+RUN python -m pip install --no-cache-dir --no-deps .
 
 COPY app.py ./
 COPY .chainlit ./.chainlit

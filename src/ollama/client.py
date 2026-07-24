@@ -9,6 +9,7 @@ from pydantic import BaseModel, ValidationError
 from src.monitoring import OLLAMA_DURATION, OLLAMA_REQUESTS
 from src.ollama.models import (
     ChatMessage,
+    ChatStreamChunk,
     OllamaModelNotFoundError,
     OllamaResponseError,
     OllamaUnavailableError,
@@ -36,10 +37,27 @@ class OllamaService:
     async def close(self) -> None:
         await self._client.aclose()
 
-    async def stream_chat(self, messages: list[ChatMessage]) -> AsyncIterator[str]:
+    async def stream_chat(
+        self,
+        messages: list[ChatMessage],
+        *,
+        model: str | None = None,
+    ) -> AsyncIterator[str]:
+        async for chunk in self.stream_chat_events(messages, model=model):
+            if chunk.content:
+                yield chunk.content
+
+    async def stream_chat_events(
+        self,
+        messages: list[ChatMessage],
+        *,
+        model: str | None = None,
+    ) -> AsyncIterator[ChatStreamChunk]:
         payload = {
-            "model": self._chat_model,
-            "messages": [message.model_dump() for message in messages],
+            "model": model or self._chat_model,
+            "messages": [
+                message.model_dump(exclude_none=True) for message in messages
+            ],
             "stream": True,
         }
         started = time.monotonic()
@@ -54,13 +72,18 @@ class OllamaService:
                         continue
                     try:
                         chunk = json.loads(line)
-                        content = chunk.get("message", {}).get("content", "")
+                        message = chunk.get("message", {})
+                        content = message.get("content", "")
+                        thinking = message.get("thinking", "")
                     except (json.JSONDecodeError, AttributeError) as error:
                         raise OllamaResponseError(
                             "Malformed streaming response"
                         ) from error
-                    if content:
-                        yield str(content)
+                    if content or thinking:
+                        yield ChatStreamChunk(
+                            content=str(content or ""),
+                            thinking=str(thinking or ""),
+                        )
         except httpx.RequestError as error:
             status = "error"
             raise OllamaUnavailableError("Ollama is unavailable") from error
