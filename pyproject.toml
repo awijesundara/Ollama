@@ -11,6 +11,7 @@ dependencies = [
   "alembic>=1.14,<2",
   "asyncpg>=0.30,<1",
   "chainlit>=2.11.1,<2.12",
+  "cryptography>=45,<47",
   "greenlet>=3.1,<4",
   "httpx>=0.28,<1",
   "ldap3>=2.9,<3",
@@ -65,6 +66,8 @@ module = [
   "asyncpg",
   "chainlit",
   "chainlit.*",
+  "cryptography",
+  "cryptography.*",
   "fastapi",
   "httpx",
   "ldap3",
@@ -86,3 +89,7 @@ disable_error_code = ["no-untyped-call"]
 [[tool.mypy.overrides]]
 module = "src.database.chainlit_layer"
 disable_error_code = ["misc"]
+
+[[tool.mypy.overrides]]
+module = "src.database.encrypted_file_layer"
+disable_error_code = ["misc", "untyped-decorator"]

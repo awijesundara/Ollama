@@ -1,6 +1,7 @@
 alembic>=1.14,<2
 asyncpg>=0.30,<1
 chainlit>=2.11.1,<2.12
+cryptography>=45,<47
 greenlet>=3.1,<4
 httpx>=0.28,<1
 ldap3>=2.9,<3

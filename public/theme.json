@@ -1,0 +1,31 @@
+{
+  "custom_fonts": [],
+  "variables": {
+    "light": {
+      "--font-sans": "Inter, ui-sans-serif, system-ui, sans-serif",
+      "--background": "210 20% 98%",
+      "--foreground": "222 47% 11%",
+      "--card": "0 0% 100%",
+      "--card-foreground": "222 47% 11%",
+      "--primary": "160 84% 32%",
+      "--primary-foreground": "0 0% 100%",
+      "--border": "214 25% 90%",
+      "--sidebar-background": "210 25% 96%",
+      "--sidebar-foreground": "222 30% 18%"
+    },
+    "dark": {
+      "--font-sans": "Inter, ui-sans-serif, system-ui, sans-serif",
+      "--background": "222 18% 9%",
+      "--foreground": "210 20% 96%",
+      "--card": "222 16% 12%",
+      "--card-foreground": "210 20% 96%",
+      "--primary": "160 84% 39%",
+      "--primary-foreground": "0 0% 100%",
+      "--border": "220 14% 20%",
+      "--sidebar-background": "222 20% 7%",
+      "--sidebar-foreground": "215 18% 88%",
+      "--sidebar-accent": "222 14% 14%"
+    }
+  }
+}
+

@@ -7,7 +7,7 @@ from src.runtime import services
 async def main() -> int:
     try:
         await services.start()
-        database = await services.database.health_check()
+        storage = await services.storage_health_check()
         ollama = await services.ollama.health_check()
         models = await services.ollama.models_available(
             {
@@ -15,11 +15,12 @@ async def main() -> int:
                 services.settings.OLLAMA_EMBEDDING_MODEL,
             }
         )
-        result = {"database": database, "ollama": ollama, "models": models}
+        result = {"storage": storage, "ollama": ollama, "models": models}
         print(json.dumps(result))
         return 0 if all(result.values()) else 1
     finally:
-        await services.database.close()
+        if services.settings.STORAGE_BACKEND == "postgresql":
+            await services.database.close()
         await services.ollama.close()
 
 

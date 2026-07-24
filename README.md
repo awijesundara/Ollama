@@ -1,8 +1,9 @@
 # Chainlit Ollama Persistent Memory
 
 An authenticated, multi-user Chainlit application with stateless Ollama
-generation and PostgreSQL-owned chat history, personal memory, summaries,
-preferences, audit records, and optional pgvector retrieval.
+generation and encrypted per-user file storage for chat history, personal
+memory, summaries, preferences, and audit records. PostgreSQL remains an
+optional backend.
 
 The complete product blueprint and backlog are preserved in
 [`BACKLOG.md`](BACKLOG.md). The original repository was empty; its assessment
@@ -14,7 +15,10 @@ is recorded in [`ASSESSMENT.md`](ASSESSMENT.md).
   `objectGUID` as the immutable ownership key.
 - Trusted reverse-proxy header authentication as an alternative deployment
   mode.
-- Chainlit 2.11+ PostgreSQL history and authenticated thread resume.
+- Chainlit 2.11+ ChatGPT-style web UI with searchable history, new chat,
+  authenticated resume, settings sidebar, streaming, and dark/light themes.
+- AES-256-GCM encrypted per-user files with opaque keyed filenames, atomic
+  writes, tamper detection, and `0600` file permissions.
 - Global and thread-scoped memory with server-derived ownership on every query.
 - Explicit memory commands, settings, actions, JSON export, and confirmed
   destructive operations.
@@ -37,7 +41,7 @@ Ollama never stores memory and never receives database or LDAP credentials.
 app.py                         Chainlit callback registration
 src/auth/                      AD authentication and immutable identity
 src/chat/                      lifecycle, history, prompts, summaries
-src/database/                  async PostgreSQL and Chainlit data layer
+src/database/                  encrypted-file and PostgreSQL Chainlit layers
 src/memory/                    models, validation, repository, service, retrieval
 src/ollama/                    native async Ollama client
 src/security/                  secret detection and audit persistence
@@ -51,10 +55,13 @@ scripts/                       migration, health and retention entrypoints
 ## Requirements
 
 - Python 3.11–3.13
-- PostgreSQL 15+ with `pgcrypto` and `pgvector`
 - Chainlit 2.11+
 - Ollama with the configured chat and embedding models
 - Windows AD reachable through LDAPS, or an authenticating reverse proxy
+- A protected local filesystem directory
+
+PostgreSQL 15+ with `pgcrypto` and `pgvector` is needed only when
+`STORAGE_BACKEND=postgresql`.
 
 ## Configuration
 
@@ -62,8 +69,32 @@ Copy `.env.example` to a protected environment file and replace every
 placeholder. Never commit `.env`.
 
 Production validation requires HTTPS, a Chainlit authentication secret, a
-user-hash salt, PostgreSQL, and—when `AUTH_MODE=ldap`—LDAPS, a base DN, and CA
-file. `MEMORY_AUTO_EXTRACTION=false` is the safe default.
+user-hash salt and—when `AUTH_MODE=ldap`—LDAPS, a base DN, and CA file.
+`MEMORY_AUTO_EXTRACTION=false` is the safe default.
+
+### Encrypted file storage
+
+This is the default backend:
+
+```text
+STORAGE_BACKEND=encrypted_files
+ENCRYPTED_STORAGE_DIR=/var/lib/chainlit-ollama-memory/users
+ENCRYPTED_STORAGE_KEY=<base64-encoded 32-byte key>
+```
+
+Generate the master key once in a secure administrative environment:
+
+```bash
+openssl rand -base64 32
+```
+
+Store it only in the root-owned `0640` environment file or a secrets manager.
+Losing the key makes every user file unrecoverable. Exposing it compromises
+every file, so back it up separately from the encrypted data.
+
+Each user sees their exact opaque `.enc` path in the Chainlit welcome message
+and through **Where is my data?**. The path does not contain their username,
+UPN, or AD GUID.
 
 ### AD mode
 
@@ -85,7 +116,9 @@ python3.12 -m venv .venv
 python -m pip install -e '.[dev]'
 ```
 
-## Database
+## Optional PostgreSQL backend
+
+Set `STORAGE_BACKEND=postgresql`, configure `DATABASE_URL`, and apply:
 
 Use a migration role rather than the runtime application role:
 
@@ -134,7 +167,7 @@ mypy src
 pytest
 ```
 
-PostgreSQL tests require a migrated disposable database in
+PostgreSQL-backend tests require a migrated disposable database in
 `TEST_DATABASE_URL`. CI provisions pgvector PostgreSQL, tests migrations in
 both directions, and runs the full suite.
 
@@ -150,22 +183,22 @@ only booleans and never connection details.
 
 ## Deployment checklist
 
-1. Back up PostgreSQL and perform an isolated restore test.
-2. Create separate least-privilege application and migration roles.
-3. Install into a versioned directory under `/opt/chainlit-ollama-memory`.
-4. Store environment values in a root-owned `0640` file.
-5. Validate AD certificate trust and immutable `objectGUID` mapping.
-6. Apply migrations with the migration role.
-7. Confirm both required Ollama models using the health check.
-8. Install the nginx, systemd, and logrotate examples.
-9. Run the complete CI suite against the release.
-10. Validate Alice/Bob isolation, restart persistence, and thread resume.
-11. Promote traffic and monitor audit, error, latency, and pool metrics.
+1. Back up the encrypted user directory and encryption key separately, then
+   test an isolated restore.
+2. Install into a versioned directory under `/opt/chainlit-ollama-memory`.
+3. Store environment values in a root-owned `0640` file.
+4. Validate AD certificate trust and immutable `objectGUID` mapping.
+5. If using PostgreSQL, apply migrations with a separate migration role.
+6. Confirm both required Ollama models using the health check.
+7. Install the nginx, systemd, and logrotate examples.
+8. Run the complete CI suite against the release.
+9. Validate Alice/Bob isolation, restart persistence, and thread resume.
+10. Promote traffic and monitor audit, error, latency, and pool metrics.
 
 ## Rollback checklist
 
 1. Drain traffic and stop the service.
-2. Preserve logs and take a verified database backup.
+2. Preserve logs and take a verified storage backup.
 3. Point `current` to the previous versioned release.
 4. Do not downgrade migrations unless the previous release is incompatible
    with additive tables.
@@ -175,4 +208,3 @@ only booleans and never connection details.
 
 See [`deployment/BACKUP_AND_RECOVERY.md`](deployment/BACKUP_AND_RECOVERY.md)
 for the backup and recovery procedure.
-

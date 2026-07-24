@@ -27,7 +27,9 @@ RestrictSUIDSGID=true
 LockPersonality=true
 MemoryDenyWriteExecute=true
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
-ReadWritePaths=/var/log/chainlit-ollama-memory
+StateDirectory=chainlit-ollama-memory
+StateDirectoryMode=0700
+ReadWritePaths=/var/log/chainlit-ollama-memory /var/lib/chainlit-ollama-memory
 
 [Install]
 WantedBy=multi-user.target

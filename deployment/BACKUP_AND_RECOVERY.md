@@ -1,6 +1,22 @@
 # Backup and recovery
 
-Use a dedicated backup account and encrypted destination. Never place database
+## Encrypted file backend
+
+Back up `/var/lib/chainlit-ollama-memory/users` as ordinary binary files. The
+files are already encrypted and authenticated, but the backup destination
+should still be encrypted and access-controlled.
+
+Back up `ENCRYPTED_STORAGE_KEY` separately in an organizational secrets
+manager. Never store the key beside the encrypted files. A usable recovery
+requires both, while theft of both compromises all user data.
+
+Restore into an isolated directory, set mode `0700` on the directory and `0600`
+on files, supply the recovered key, and use the health check plus an
+authenticated thread-resume test.
+
+## PostgreSQL backend
+
+Use a dedicated backup account and encrypted destination. Never place
 credentials on the command line; provide them through a root-readable
 environment or `.pgpass`.
 
@@ -37,4 +53,3 @@ counts. Destroy the isolated database only after evidence is retained.
 6. use `scripts/health_check.py`.
 7. Validate Alice/Bob isolation and thread resume.
 8. Restore traffic and monitor error/audit rates.
-

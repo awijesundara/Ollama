@@ -1,0 +1,22 @@
+:root {
+  --chat-content-max-width: 52rem;
+}
+
+body {
+  letter-spacing: -0.005em;
+}
+
+[data-sidebar="sidebar"] {
+  border-right: 1px solid hsl(var(--border));
+}
+
+main {
+  background:
+    radial-gradient(circle at 50% -20%, hsl(var(--primary) / 0.08), transparent 36%),
+    hsl(var(--background));
+}
+
+textarea {
+  line-height: 1.55;
+}
+

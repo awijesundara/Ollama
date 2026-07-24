@@ -29,6 +29,9 @@ jobs:
       DATABASE_URL: postgresql://chainlit:test-only-password@localhost:5432/chainlit_test
       TEST_DATABASE_URL: postgresql://chainlit:test-only-password@localhost:5432/chainlit_test
       APP_ENV: test
+      STORAGE_BACKEND: encrypted_files
+      ENCRYPTED_STORAGE_DIR: ${{ runner.temp }}/chainlit-ollama-memory/users
+      ENCRYPTED_STORAGE_KEY: a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -43,4 +46,3 @@ jobs:
       - run: pytest
       - run: alembic -x database_url="$DATABASE_URL" downgrade base
       - run: alembic -x database_url="$DATABASE_URL" upgrade head
-

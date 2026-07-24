@@ -1,3 +1,5 @@
+import base64
+import binascii
 from functools import lru_cache
 from typing import Literal
 
@@ -15,6 +17,9 @@ class Settings(BaseSettings):
 
     APP_ENV: Literal["development", "test", "production"] = "development"
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    STORAGE_BACKEND: Literal["encrypted_files", "postgresql"] = "encrypted_files"
+    ENCRYPTED_STORAGE_DIR: str = "/var/lib/chainlit-ollama-memory/users"
+    ENCRYPTED_STORAGE_KEY: SecretStr | None = None
     CHAINLIT_AUTH_SECRET: SecretStr | None = None
     CHAINLIT_URL: AnyHttpUrl = AnyHttpUrl("http://localhost:8000")
     AUTH_MODE: Literal["ldap", "header"] = "ldap"
@@ -65,6 +70,24 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production(self) -> "Settings":
+        if self.STORAGE_BACKEND == "encrypted_files":
+            if self.ENCRYPTED_STORAGE_KEY is None and self.APP_ENV == "production":
+                raise ValueError(
+                    "ENCRYPTED_STORAGE_KEY is required for encrypted file storage"
+                )
+            if self.ENCRYPTED_STORAGE_KEY is not None:
+                try:
+                    decoded_key = base64.b64decode(
+                        self.ENCRYPTED_STORAGE_KEY.get_secret_value(), validate=True
+                    )
+                except (binascii.Error, ValueError) as error:
+                    raise ValueError(
+                        "ENCRYPTED_STORAGE_KEY must be valid base64"
+                    ) from error
+                if len(decoded_key) != 32:
+                    raise ValueError(
+                        "ENCRYPTED_STORAGE_KEY must decode to exactly 32 bytes"
+                    )
         if self.APP_ENV != "production":
             return self
         missing = [
