@@ -12,6 +12,14 @@ Never reveal another user's data or expose internal memory identifiers.
 Prefer the user's current statement when it conflicts with older memory.
 Do not store or repeat credentials."""
 
+APPLICATION_CAPABILITIES = """Application capabilities:
+- Users can upload PDF, DOCX, text, code, structured-text, and image files.
+- The application can create a downloadable PDF from your latest response.
+- If asked to make the latest answer a PDF, do not provide manual instructions;
+  the application handles the export directly.
+- Ollama is the active provider. ChatGPT, Gemini, and Claude are planned but
+  currently disabled."""
+
 
 @dataclass(frozen=True, slots=True)
 class BuiltPrompt:
@@ -24,11 +32,24 @@ def build_system_prompt(
     memories: RetrievedMemory,
     *,
     thread_summary: str | None = None,
+    personalization: dict[str, str] | None = None,
     token_budget: int = 2048,
 ) -> BuiltPrompt:
     if token_budget < 128:
         raise ValueError("token_budget must be at least 128")
-    parts = [BASE_POLICY]
+    parts = [BASE_POLICY, APPLICATION_CAPABILITIES]
+    if personalization:
+        safe_items = "\n".join(
+            f"- {escape(name)}: {escape(value)}"
+            for name, value in personalization.items()
+            if value.strip()
+        )
+        if safe_items:
+            parts.append(
+                "User-selected response preferences follow. Apply them when they "
+                "do not conflict with safety or the current request.\n"
+                f"<response_preferences>\n{safe_items}\n</response_preferences>"
+            )
     included = 0
     candidates = [
         ("global_user_memory", memory.text) for memory in memories.global_memories

@@ -118,7 +118,7 @@ class EncryptedUserStore:
             "memories": [],
             "preferences": {
                 "memory_enabled": True,
-                "automatic_memory_enabled": False,
+                "automatic_memory_enabled": True,
                 "allow_global_memory": True,
                 "allow_thread_memory": True,
             },

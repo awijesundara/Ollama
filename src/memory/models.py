@@ -56,7 +56,7 @@ class MemoryRecord(BaseModel):
 class MemoryPreferences(BaseModel):
     user_identifier: str
     memory_enabled: bool = True
-    automatic_memory_enabled: bool = False
+    automatic_memory_enabled: bool = True
     allow_global_memory: bool = True
     allow_thread_memory: bool = True
 

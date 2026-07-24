@@ -20,3 +20,197 @@ textarea {
   line-height: 1.55;
 }
 
+/* Three-line reasoning reel: context above/below, active thought in focus. */
+.thinking-reel {
+  overflow: hidden;
+}
+
+.thinking-reel ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.thinking-reel li {
+  display: none;
+  margin: 0;
+  padding-left: 1.15rem;
+  position: relative;
+  opacity: 0;
+  filter: blur(2px);
+  transform: translateY(0.55rem) scale(0.985);
+  transition:
+    opacity 360ms ease,
+    filter 360ms ease,
+    transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.thinking-reel li::before {
+  content: "›";
+  position: absolute;
+  left: 0;
+  color: hsl(var(--primary));
+}
+
+.thinking-reel li:nth-last-child(-n + 3) {
+  display: block;
+  opacity: 0.38;
+  transform: translateY(0);
+}
+
+.thinking-reel li:nth-last-child(2) {
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(0) scale(1);
+}
+
+.thinking-reel li:last-child {
+  opacity: 0.32;
+  filter: blur(1.5px);
+}
+
+.thinking-reel li:only-child {
+  opacity: 1;
+  filter: blur(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinking-reel li {
+    transition: none;
+  }
+}
+
+/* Model selection lives with the composer, where the choice is relevant. */
+.composer-with-model-picker {
+  position: relative;
+}
+
+.composer-with-model-picker textarea {
+  padding-bottom: 2.7rem;
+}
+
+.composer-model-picker {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.55rem;
+  z-index: 30;
+}
+
+.composer-model-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-height: 1.9rem;
+  padding: 0.25rem 0.58rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  background: hsl(var(--background) / 0.82);
+  color: hsl(var(--foreground) / 0.82);
+  font-size: 0.76rem;
+  font-weight: 600;
+  backdrop-filter: blur(12px);
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.composer-model-trigger:hover {
+  border-color: hsl(var(--primary) / 0.55);
+  background: hsl(var(--accent));
+  transform: translateY(-1px);
+}
+
+.provider-live-dot {
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 50%;
+  background: #39d98a;
+  box-shadow: 0 0 0 3px rgb(57 217 138 / 0.13);
+}
+
+.model-chevron {
+  margin-left: 0.08rem;
+  opacity: 0.6;
+}
+
+.composer-model-menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 0.55rem);
+  display: none;
+  width: min(21rem, calc(100vw - 2rem));
+  padding: 0.45rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.9rem;
+  background: hsl(var(--popover) / 0.96);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 0.24);
+  backdrop-filter: blur(18px);
+}
+
+.composer-model-menu.is-open {
+  display: block;
+  animation: model-menu-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.model-menu-title {
+  padding: 0.45rem 0.55rem 0.55rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.model-option {
+  display: grid;
+  grid-template-columns: 1.25rem 1fr auto;
+  gap: 0.55rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.62rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: hsl(var(--foreground));
+  text-align: left;
+}
+
+.model-option.is-active {
+  background: hsl(var(--primary) / 0.1);
+}
+
+.model-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.model-option-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.model-option-copy small,
+.model-option-status {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.68rem;
+}
+
+.model-option-status {
+  white-space: nowrap;
+}
+
+@keyframes model-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

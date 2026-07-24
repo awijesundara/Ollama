@@ -27,6 +27,7 @@ is recorded in [`ASSESSMENT.md`](ASSESSMENT.md).
 - Conversation summarization and configurable recent-message context.
 - PDF, DOCX, text, structured-text, source-code, and image attachments.
 - Live, transient model reasoning separated from the final answer.
+- Native downloadable PDF export for assistant responses.
 - Automatic structured memory extraction, disabled by default and gated by
   both administrator configuration and user preference.
 - Optional Ollama embeddings and user/thread-scoped pgvector retrieval.
@@ -163,6 +164,12 @@ When Ollama returns a `thinking` stream, the UI displays it live in a temporary
 answer begins, keeping the saved conversation clean. Disable this per
 deployment with `SHOW_MODEL_THINKING=false`.
 
+Every completed assistant response includes a **Download PDF** action. Users
+can also type `/pdf`, `/pdf <custom text>`, or ask naturally to convert the
+latest answer into a PDF. The settings sidebar shows Ollama as the active local
+provider; ChatGPT, Gemini, and Claude appear as disabled **Coming soon**
+providers until their API integrations are configured.
+
 Docker Desktop on macOS and Windows resolves `host.docker.internal`
 automatically. The Compose file also provides the hostname on Linux, but the
 host Ollama server must accept connections from the Docker bridge. For example,
@@ -222,8 +229,9 @@ The reverse proxy is responsible for public TLS and WebSocket forwarding.
 /auto-memory-off
 ```
 
-Automatic extraction requires both `MEMORY_AUTO_EXTRACTION=true` and the
-user’s automatic-memory preference.
+Automatic extraction is enabled by default and saves durable, useful facts
+rather than complete transcripts. Users retain `/memories`, `/memory-off`,
+`/forget`, and export/deletion controls.
 
 ## Verification
 

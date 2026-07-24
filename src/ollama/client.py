@@ -52,6 +52,7 @@ class OllamaService:
         messages: list[ChatMessage],
         *,
         model: str | None = None,
+        temperature: float | None = None,
     ) -> AsyncIterator[ChatStreamChunk]:
         payload = {
             "model": model or self._chat_model,
@@ -60,6 +61,8 @@ class OllamaService:
             ],
             "stream": True,
         }
+        if temperature is not None:
+            payload["options"] = {"temperature": temperature}
         started = time.monotonic()
         status = "success"
         try:
