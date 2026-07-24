@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     ATTACHMENT_MAX_FILES: int = Field(10, ge=1, le=20)
     ATTACHMENT_MAX_EXTRACTED_CHARS: int = Field(100_000, ge=1_000, le=1_000_000)
     MEMORY_ENABLED: bool = True
-    MEMORY_AUTO_EXTRACTION: bool = False
+    MEMORY_AUTO_EXTRACTION: bool = True
     MEMORY_MAX_GLOBAL_RESULTS: int = Field(10, ge=0, le=100)
     MEMORY_MAX_THREAD_RESULTS: int = Field(10, ge=0, le=100)
     MEMORY_MAX_ITEM_LENGTH: int = Field(500, ge=1, le=10_000)

@@ -53,6 +53,7 @@ default_chat_settings_open = false
 cot = "hidden"
 alert_style = "modern"
 custom_css = "/public/chat.css"
+custom_js = "/public/chat.js"
 logo_file_url = ""
 default_avatar_file_url = ""
 

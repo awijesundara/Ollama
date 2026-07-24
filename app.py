@@ -117,6 +117,11 @@ async def export_memories(_: cl.Action) -> None:
     await handlers.export_memories()
 
 
+@cl.action_callback("export_pdf")
+async def export_pdf(_: cl.Action) -> None:
+    await handlers.export_last_response_pdf()
+
+
 @cl.action_callback("storage_location")
 async def storage_location(_: cl.Action) -> None:
     await handlers.show_storage_location()

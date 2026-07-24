@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any
 
@@ -39,7 +40,10 @@ from src.runtime import services
 from src.security.audit import AuditEvent, hash_user_identifier
 from src.security.secret_detection import detect_secret
 from src.ui.actions import confirm_destructive_action, send_json_export
-from src.ui.settings import memory_actions, send_memory_settings
+from src.ui.greetings import choose_greeting
+from src.ui.pdf_export import explicit_pdf_text, is_pdf_export_request, render_pdf
+from src.ui.settings import default_chat_preferences, send_memory_settings
+from src.ui.thinking import format_thinking_text, thinking_display_seconds
 
 logger = logging.getLogger(__name__)
 
@@ -53,15 +57,15 @@ async def on_chat_start() -> None:
     state = ConversationState(thread_id=thread_id)
     cl.user_session.set("conversation_state", state.model_dump(mode="json"))
     preferences = await services.require_memory().get_preferences(identity)
-    await send_memory_settings(preferences)
-    await cl.Message(
-        content=(
-            "Your chats and memories are private to your authenticated account. "
-            f"Storage: `{services.user_storage_location(identity.user_identifier)}`. "
-            "Type `/memories` to inspect what is remembered."
-        ),
-        actions=memory_actions(),
-    ).send()
+    chat_preferences = default_chat_preferences(preferences)
+    cl.user_session.set("chat_preferences", chat_preferences)
+    await send_memory_settings(preferences, current=chat_preferences)
+    previous_greeting = cl.user_session.get("last_greeting")
+    greeting = choose_greeting(
+        previous_greeting if isinstance(previous_greeting, str) else None
+    )
+    cl.user_session.set("last_greeting", greeting)
+    await cl.Message(content=greeting).send()
     ACTIVE_SESSIONS.inc()
 
 
@@ -89,7 +93,9 @@ async def on_chat_resume(thread: dict[str, Any], data_layer: Any) -> None:
     )
     cl.user_session.set("conversation_state", state.model_dump(mode="json"))
     preferences = await services.require_memory().get_preferences(identity)
-    await send_memory_settings(preferences)
+    chat_preferences = default_chat_preferences(preferences)
+    cl.user_session.set("chat_preferences", chat_preferences)
+    await send_memory_settings(preferences, current=chat_preferences)
     THREAD_RESUMES.inc()
     ACTIVE_SESSIONS.inc()
 
@@ -100,11 +106,18 @@ async def on_message(message: cl.Message) -> None:
     identity = get_authenticated_identity()
     state = _state()
     _bind(identity.user_identifier, state.thread_id, message.id)
+    if not message.elements and is_pdf_export_request(message.content):
+        await export_last_response_pdf(explicit_pdf_text(message.content))
+        return
     prompt_content = message.content.strip()
+    chat_preferences = _chat_preferences()
     image_payloads: list[str] = []
     elements = list(message.elements or [])
     if elements:
-        if not services.settings.ATTACHMENTS_ENABLED:
+        if (
+            not services.settings.ATTACHMENTS_ENABLED
+            or not chat_preferences["attachments_enabled"]
+        ):
             await cl.Message(content="File attachments are disabled.").send()
             return
         try:
@@ -128,6 +141,11 @@ async def on_message(message: cl.Message) -> None:
                 f"{processed.text}"
             ).strip()
         if processed.images:
+            if not chat_preferences["image_analysis_enabled"]:
+                await cl.Message(
+                    content="Image analysis is disabled in Chat Settings."
+                ).send()
+                return
             if not services.settings.OLLAMA_VISION_MODEL:
                 await cl.Message(
                     content="Image processing is not configured on this server."
@@ -209,6 +227,12 @@ async def on_message(message: cl.Message) -> None:
     system = build_system_prompt(
         retrieved,
         thread_summary=summary_text,
+        personalization={
+            "style": str(chat_preferences["personality"]),
+            "detail": str(chat_preferences["response_detail"]),
+            "language": str(chat_preferences["response_language"]),
+            "custom instructions": str(chat_preferences["custom_instructions"]),
+        },
         token_budget=memory_budget,
     )
     ollama_messages = [
@@ -223,10 +247,13 @@ async def on_message(message: cl.Message) -> None:
     response = cl.Message(content="")
     response_started = False
     thinking_message: cl.Message | None = None
-    if services.settings.SHOW_MODEL_THINKING:
+    thinking_text = ""
+    rendered_thinking = ""
+    thinking_removal: asyncio.Task[None] | None = None
+    if services.settings.SHOW_MODEL_THINKING and chat_preferences["show_thinking"]:
         thinking_message = cl.Message(
-            content="✨ **Thinking…**\n\n",
-            author="AI is thinking",
+            content="**Thinking**\n\nWorking through this…",
+            author="Private Ollama",
             metadata={"transient": True},
             tags=["transient-thinking"],
         )
@@ -239,13 +266,29 @@ async def on_message(message: cl.Message) -> None:
                 if image_payloads
                 else None
             ),
+            temperature=float(chat_preferences["temperature"]),
         ):
-            if chunk.thinking and services.settings.SHOW_MODEL_THINKING:
+            if chunk.thinking and chat_preferences["show_thinking"]:
+                thinking_text += chunk.thinking
                 if thinking_message is not None:
-                    await thinking_message.stream_token(chunk.thinking)
+                    completed = format_thinking_text(
+                        thinking_text, include_incomplete=False
+                    )
+                    if completed != rendered_thinking and "Working through" not in completed:
+                        thinking_message.content = completed
+                        await thinking_message.update()
+                        rendered_thinking = completed
             if chunk.content:
                 if thinking_message is not None:
-                    await thinking_message.remove()
+                    if thinking_text.strip():
+                        thinking_message.content = format_thinking_text(thinking_text)
+                        await thinking_message.update()
+                    thinking_removal = asyncio.create_task(
+                        _remove_thinking_message(
+                            thinking_message,
+                            thinking_display_seconds(thinking_text),
+                        )
+                    )
                     thinking_message = None
                 if not response_started:
                     await response.send()
@@ -270,6 +313,7 @@ async def on_message(message: cl.Message) -> None:
         else:
             await response.send()
         return
+
     except OllamaUnavailableError:
         if thinking_message is not None:
             await thinking_message.remove()
@@ -279,6 +323,9 @@ async def on_message(message: cl.Message) -> None:
         else:
             await response.send()
         return
+
+    if thinking_removal is not None:
+        await thinking_removal
 
     state.messages.extend(
         [
@@ -295,7 +342,11 @@ async def on_message(message: cl.Message) -> None:
         await services.extractor.extract(
             identity, prompt_content, state.thread_id, message.id
         )
-    if services.settings.THREAD_SUMMARY_ENABLED and services.summarizer:
+    if (
+        services.settings.THREAD_SUMMARY_ENABLED
+        and chat_preferences["thread_summaries_enabled"]
+        and services.summarizer
+    ):
         state.summary = await services.summarizer.maybe_update(
             identity.user_identifier,
             state.thread_id,
@@ -309,12 +360,37 @@ async def on_settings_update(settings: dict[str, Any]) -> None:
     identity = get_authenticated_identity()
     if not await _ensure_services():
         return
-    update = MemoryPreferenceUpdate(
-        memory_enabled=bool(settings.get("memory_enabled", True)),
-        automatic_memory_enabled=bool(settings.get("automatic_memory_enabled", False)),
-        allow_global_memory=bool(settings.get("allow_global_memory", True)),
-        allow_thread_memory=bool(settings.get("allow_thread_memory", True)),
-    )
+    selected_provider = str(settings.get("model_provider", "Ollama · Connected"))
+    current = _chat_preferences() | settings
+    cl.user_session.set("chat_preferences", current)
+    cl.user_session.set("provider_preview", selected_provider)
+    if not selected_provider.startswith("Ollama"):
+        await send_memory_settings(
+            await services.require_memory().get_preferences(identity),
+            selected_provider,
+            current,
+        )
+        await cl.Message(
+            content=(
+                f"**{selected_provider.split(' ·', 1)[0]} is a UI preview.** "
+                "This conversation will continue using Ollama until its API "
+                "credentials and adapter are configured."
+            )
+        ).send()
+        return
+    preference_fields = {
+        key: bool(settings[key])
+        for key in (
+            "memory_enabled",
+            "automatic_memory_enabled",
+            "allow_global_memory",
+            "allow_thread_memory",
+        )
+        if key in settings
+    }
+    if not preference_fields:
+        return
+    update = MemoryPreferenceUpdate(**preference_fields)
     await services.require_memory().update_preferences(identity, update)
     if services.audit:
         await services.audit.record(
@@ -329,13 +405,70 @@ async def on_settings_update(settings: dict[str, Any]) -> None:
                 ),
             )
         )
-    await cl.Message(content="Memory settings saved.").send()
+    await cl.Message(content="Settings saved.").send()
+
+
+async def show_provider_preview(provider: str) -> None:
+    identity = get_authenticated_identity()
+    selected = (
+        "Ollama · Connected"
+        if provider == "Ollama"
+        else f"{provider} · Setup required"
+    )
+    await send_memory_settings(
+        await services.require_memory().get_preferences(identity),
+        selected,
+        _chat_preferences(),
+    )
+    if provider == "Ollama":
+        await cl.Message(
+            content="**Ollama is connected** and handling this conversation locally."
+        ).send()
+        return
+    await cl.Message(
+        content=(
+            f"**{provider} integration preview**\n\n"
+            "The provider and model controls are ready in Chat Settings. "
+            "API authentication and request routing are intentionally disabled "
+            "until credentials are configured."
+        )
+    ).send()
 
 
 async def view_memories() -> None:
     identity = get_authenticated_identity()
     memories = await services.require_memory().list_memories(identity)
     await cl.Message(content=_format_memories(memories)).send()
+
+
+async def export_last_response_pdf(text: str | None = None) -> None:
+    if text is None:
+        state = _state()
+        text = next(
+            (
+                message.content
+                for message in reversed(state.messages)
+                if message.role == "assistant" and message.content.strip()
+            ),
+            None,
+        )
+    if not text:
+        await cl.Message(
+            content="There is no assistant response to export yet."
+        ).send()
+        return
+    pdf = render_pdf(text)
+    await cl.Message(
+        content="Your PDF is ready.",
+        elements=[
+            cl.File(
+                name="assistant-response.pdf",
+                content=pdf,
+                mime="application/pdf",
+                display="inline",
+            )
+        ],
+    ).send()
 
 
 async def export_memories() -> None:
@@ -573,11 +706,36 @@ def _thread_id() -> str:
     return thread_id
 
 
+async def _remove_thinking_message(
+    message: cl.Message, display_seconds: float
+) -> None:
+    """Leave completed reasoning visible briefly, then dismiss its transient card."""
+    await asyncio.sleep(display_seconds)
+    await message.remove()
+
+
 def _state() -> ConversationState:
     raw = cl.user_session.get("conversation_state")
     if raw is None:
         return ConversationState(thread_id=_thread_id())
     return ConversationState.model_validate(raw)
+
+
+def _chat_preferences() -> dict[str, Any]:
+    current = cl.user_session.get("chat_preferences")
+    if isinstance(current, dict):
+        return current
+    return {
+        "personality": "Default · Clear and neutral",
+        "response_detail": "Balanced",
+        "response_language": "Automatic",
+        "custom_instructions": "",
+        "temperature": 0.7,
+        "show_thinking": True,
+        "attachments_enabled": True,
+        "image_analysis_enabled": True,
+        "thread_summaries_enabled": True,
+    }
 
 
 def _format_memories(memories: list[Any]) -> str:

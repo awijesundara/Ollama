@@ -16,5 +16,5 @@ def test_production_requires_secure_endpoints() -> None:
         )
 
 
-def test_automatic_memory_defaults_off() -> None:
-    assert Settings(_env_file=None).MEMORY_AUTO_EXTRACTION is False
+def test_automatic_memory_defaults_on() -> None:
+    assert Settings(_env_file=None).MEMORY_AUTO_EXTRACTION is True
