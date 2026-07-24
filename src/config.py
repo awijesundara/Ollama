@@ -31,9 +31,15 @@ class Settings(BaseSettings):
     DATABASE_POOL_MAX_SIZE: int = Field(20, ge=1)
     OLLAMA_HOST: AnyHttpUrl = AnyHttpUrl("http://localhost:11434")
     OLLAMA_CHAT_MODEL: str = "gpt-oss:20b"
+    OLLAMA_VISION_MODEL: str | None = None
     OLLAMA_EMBEDDING_MODEL: str = "embeddinggemma"
     OLLAMA_CONTEXT_LENGTH: int = Field(16384, ge=2048)
     OLLAMA_REQUEST_TIMEOUT: float = Field(300, gt=0)
+    SHOW_MODEL_THINKING: bool = True
+    ATTACHMENTS_ENABLED: bool = True
+    ATTACHMENT_MAX_FILE_MB: int = Field(10, ge=1, le=100)
+    ATTACHMENT_MAX_FILES: int = Field(10, ge=1, le=20)
+    ATTACHMENT_MAX_EXTRACTED_CHARS: int = Field(100_000, ge=1_000, le=1_000_000)
     MEMORY_ENABLED: bool = True
     MEMORY_AUTO_EXTRACTION: bool = False
     MEMORY_MAX_GLOBAL_RESULTS: int = Field(10, ge=0, le=100)

@@ -25,6 +25,8 @@ is recorded in [`ASSESSMENT.md`](ASSESSMENT.md).
 - Secret, credential, prompt-injection, duplicate, length, scope, and per-user
   limit checks.
 - Conversation summarization and configurable recent-message context.
+- PDF, DOCX, text, structured-text, source-code, and image attachments.
+- Live, transient model reasoning separated from the final answer.
 - Automatic structured memory extraction, disabled by default and gated by
   both administrator configuration and user preference.
 - Optional Ollama embeddings and user/thread-scoped pgvector retrieval.
@@ -141,6 +143,25 @@ Choose another installed model or port with environment variables:
 ```bash
 OLLAMA_CHAT_MODEL=llama3.2:3b APP_PORT=8080 docker compose up --build -d
 ```
+
+For image understanding, configure a locally installed vision-capable Ollama
+model separately:
+
+```bash
+OLLAMA_VISION_MODEL=qwen3.5:latest docker compose up --build -d
+```
+
+The upload pipeline accepts PDF, DOCX, TXT, Markdown, CSV, JSON, YAML,
+HTML/XML, common source-code formats, PNG, JPEG, WebP, and GIF. Text is
+extracted into the model prompt. Images are validated and sent only to the
+vision model. Raw uploads are not added to the encrypted history; extracted
+text and model responses are stored as conversation content. The defaults
+allow 10 files of up to 10 MB each and at most 100,000 extracted characters.
+
+When Ollama returns a `thinking` stream, the UI displays it live in a temporary
+**AI is thinking** chat bubble. The bubble is removed as soon as the final
+answer begins, keeping the saved conversation clean. Disable this per
+deployment with `SHOW_MODEL_THINKING=false`.
 
 Docker Desktop on macOS and Windows resolves `host.docker.internal`
 automatically. The Compose file also provides the hostname on Linux, but the
