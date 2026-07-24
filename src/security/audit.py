@@ -2,7 +2,7 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Protocol
 from uuid import UUID
 
 import asyncpg
@@ -57,3 +57,9 @@ class AuditRepository:
             retention_days,
         )
         return int(result.rsplit(" ", 1)[-1])
+
+
+class AuditWriter(Protocol):
+    async def record(self, event: AuditEvent) -> None: ...
+
+    async def purge(self, retention_days: int) -> int: ...

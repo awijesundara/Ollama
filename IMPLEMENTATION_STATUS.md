@@ -10,7 +10,7 @@ run on the local computer.
 | --- | --- |
 | 0 Assessment | `ASSESSMENT.md`, feature branch, `.gitignore`, rollback docs |
 | 1 Structure/config | Modular `src/`, typed settings, constrained dependencies |
-| 2 History | Chainlit SQLAlchemy data layer, schema migration, resume rebuild |
+| 2 History | Encrypted-file and PostgreSQL data layers, resume rebuild |
 | 3 Identity | AD `objectGUID`, trusted proxy mode, server-session identity |
 | 4 Explicit memory | Repository, validator, commands, prompt injection |
 | 5 Preferences/UI | Persistent settings, actions, confirmation, JSON export |
@@ -18,6 +18,10 @@ run on the local computer.
 | 7 Extraction | JSON schema, policy gates, conflict workflow, default-off gate |
 | 8 Semantic search | pgvector migration, Ollama embeddings, scoped scoring |
 | 9 Operations | JSON logs, metrics, health, systemd, nginx, backup/recovery |
+
+The default backend is now `encrypted_files`: one AES-256-GCM envelope per
+authenticated user. PostgreSQL remains available through
+`STORAGE_BACKEND=postgresql`.
 
 ## Security invariants implemented
 
@@ -62,4 +66,3 @@ Before production deployment, operators must:
 The blueprint explicitly excludes unrestricted model filesystem or SQL access,
 shared/team memory, full document RAG, fine-tuning, credential storage, and
 Kubernetes. None of these were added.
-

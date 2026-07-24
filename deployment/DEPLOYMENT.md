@@ -12,13 +12,24 @@
 
 /var/log/chainlit-ollama-memory
   owner chainlit, group chainlit, mode 0750
+
+/var/lib/chainlit-ollama-memory/users
+  owner chainlit, group chainlit, mode 0700
+  encrypted user envelopes: mode 0600
 ```
 
 Create a versioned release directory and a `current` symlink. Build the virtual
 environment once under `/opt/chainlit-ollama-memory/venv`; the service account
 only needs read/execute access.
 
-## Database privileges
+## Encrypted storage
+
+Set `STORAGE_BACKEND=encrypted_files` and keep the base64 master key in the
+root-owned environment file or a secrets manager. The systemd
+`StateDirectory` directive creates the writable `/var/lib` location without
+weakening `ProtectSystem=strict`.
+
+## Optional database privileges
 
 The migration role needs schema DDL and extension creation. The runtime role
 needs CRUD only on Chainlit and application tables plus sequence usage. Do not
@@ -50,4 +61,3 @@ runtime role.
 
 No systemd option should be relaxed without documenting the exact blocked path
 or syscall and the narrower alternative considered.
-

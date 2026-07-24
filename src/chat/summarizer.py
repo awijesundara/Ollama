@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import Protocol
 
 import asyncpg
 
@@ -57,10 +58,25 @@ class ThreadSummaryRepository:
         return ThreadSummary.model_validate(dict(row))
 
 
+class SummaryRepository(Protocol):
+    async def get(
+        self, user_identifier: str, thread_id: str
+    ) -> ThreadSummary | None: ...
+
+    async def upsert(
+        self,
+        user_identifier: str,
+        thread_id: str,
+        summary: str,
+        through_message_id: str | None,
+        count: int,
+    ) -> ThreadSummary: ...
+
+
 class ThreadSummarizer:
     def __init__(
         self,
-        repository: ThreadSummaryRepository,
+        repository: SummaryRepository,
         ollama: OllamaService,
         trigger_messages: int,
         recent_messages: int,

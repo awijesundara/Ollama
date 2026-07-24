@@ -12,12 +12,12 @@ def register_http_endpoints(app: object) -> None:
     async def health() -> Response:
         try:
             await services.start()
-            database = await services.database.health_check()
+            storage = await services.storage_health_check()
             ollama = await services.ollama.health_check()
         except (asyncpg.PostgresError, OSError, RuntimeError):
-            database = False
+            storage = False
             ollama = False
-        healthy = database and ollama
+        healthy = storage and ollama
         return Response(
             content='{"healthy":true}' if healthy else '{"healthy":false}',
             media_type="application/json",

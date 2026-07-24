@@ -12,7 +12,7 @@ from src.memory.service import MemoryService
 from src.memory.validator import MemoryValidationError
 from src.ollama.client import OllamaService
 from src.ollama.models import ChatMessage
-from src.security.audit import AuditEvent, AuditRepository
+from src.security.audit import AuditEvent, AuditWriter
 
 EXTRACTION_POLICY = """Extract only durable user-provided preferences, role
 information, regular technical environment details, long-term project decisions,
@@ -31,7 +31,7 @@ class MemoryExtractor:
         conflict_detector: ConflictDetector | None = None,
         retention_days: int = 365,
         create_embeddings: bool = False,
-        audit: AuditRepository | None = None,
+        audit: AuditWriter | None = None,
         embedding_dimensions: int = 768,
     ) -> None:
         self._ollama = ollama

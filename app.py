@@ -12,16 +12,16 @@ from src.auth.ad_auth import (
 )
 from src.chat import handlers
 from src.config import get_settings
-from src.database.chainlit_layer import create_chainlit_data_layer
 from src.http_endpoints import register_http_endpoints
 from src.logging_config import configure_logging
 from src.memory.models import MemoryScope
 from src.monitoring import ACTIVE_SESSIONS
+from src.runtime import services
 
 configure_logging()
 register_http_endpoints(chainlit_server)
 settings = get_settings()
-data_layer_instance = create_chainlit_data_layer(settings.DATABASE_URL)
+data_layer_instance = services.data_layer
 ad_authenticator = (
     ADAuthenticator(
         LDAPConfig(
@@ -115,6 +115,11 @@ async def view_memories(_: cl.Action) -> None:
 @cl.action_callback("export_memories")
 async def export_memories(_: cl.Action) -> None:
     await handlers.export_memories()
+
+
+@cl.action_callback("storage_location")
+async def storage_location(_: cl.Action) -> None:
+    await handlers.show_storage_location()
 
 
 @cl.action_callback("add_global")

@@ -51,7 +51,8 @@ async def main(concurrency: int, requests: int) -> None:
             }
         )
     finally:
-        await services.database.close()
+        if services.settings.STORAGE_BACKEND == "postgresql":
+            await services.database.close()
         await services.ollama.close()
 
 

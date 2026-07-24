@@ -54,8 +54,11 @@ async def on_chat_start() -> None:
     preferences = await services.require_memory().get_preferences(identity)
     await send_memory_settings(preferences)
     await cl.Message(
-        content="Memory controls are available below. Type `/memories` to inspect "
-        "what is stored.",
+        content=(
+            "Your chats and memories are private to your authenticated account. "
+            f"Storage: `{services.user_storage_location(identity.user_identifier)}`. "
+            "Type `/memories` to inspect what is remembered."
+        ),
         actions=memory_actions(),
     ).send()
     ACTIVE_SESSIONS.inc()
@@ -251,11 +254,33 @@ async def view_memories() -> None:
 async def export_memories() -> None:
     identity = get_authenticated_identity()
     exported = await services.require_memory().export_memories(identity)
-    await send_json_export(exported.model_dump(mode="json"))
+    payload = exported.model_dump(mode="json")
+    if services.file_store is not None:
+        document = await services.file_store.read_user(identity.user_identifier)
+        payload["threads"] = list(document["threads"].values())
+        payload["storage_location"] = services.user_storage_location(
+            identity.user_identifier
+        )
+    await send_json_export(payload)
     if services.audit:
         await services.audit.record(
             AuditEvent(user_identifier=identity.user_identifier, operation="export")
         )
+
+
+async def show_storage_location() -> None:
+    identity = get_authenticated_identity()
+    location = services.user_storage_location(identity.user_identifier)
+    backend = services.settings.STORAGE_BACKEND
+    detail = (
+        "This is an AES-256-GCM encrypted per-user file. Its filename is an "
+        "opaque keyed hash and does not reveal your username."
+        if backend == "encrypted_files"
+        else "This installation uses server-managed PostgreSQL storage."
+    )
+    await cl.Message(
+        content=f"**Your storage location**\n\n`{location}`\n\n{detail}"
+    ).send()
 
 
 async def clear_global_memories() -> None:

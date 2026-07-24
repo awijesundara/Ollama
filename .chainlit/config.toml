@@ -1,0 +1,28 @@
+[project]
+enable_telemetry = false
+user_env = []
+
+[features]
+unsafe_allow_html = false
+latex = true
+spontaneous_file_upload.enabled = false
+
+[features.chat_history]
+enabled = true
+
+[features.thread_sharing]
+enabled = false
+
+[UI]
+name = "Private Ollama"
+description = "Private AI chat with encrypted per-user history and memory"
+default_theme = "dark"
+layout = "wide"
+default_sidebar_state = "open"
+confirm_new_chat = true
+chat_settings_location = "sidebar"
+default_chat_settings_open = false
+cot = "hidden"
+alert_style = "modern"
+custom_css = "/public/chat.css"
+
