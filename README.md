@@ -116,6 +116,52 @@ python3.12 -m venv .venv
 python -m pip install -e '.[dev]'
 ```
 
+## Docker (host-managed Ollama)
+
+The Docker stack contains the Chainlit application and a local-only nginx
+gateway. Ollama and its models stay on the host and are not copied into an
+image or volume.
+
+Start Ollama on the host, ensure the configured model is available, and launch
+the stack:
+
+```bash
+ollama serve
+ollama pull gpt-oss:20b
+docker compose up --build -d
+```
+
+Open <http://localhost:8000>. The default gateway binds only to
+`127.0.0.1` and supplies a single local development identity. Encrypted chat
+data and generated application secrets are held in separate named volumes, so
+container rebuilds do not erase them.
+
+Choose another installed model or port with environment variables:
+
+```bash
+OLLAMA_CHAT_MODEL=llama3.2:3b APP_PORT=8080 docker compose up --build -d
+```
+
+Docker Desktop on macOS and Windows resolves `host.docker.internal`
+automatically. The Compose file also provides the hostname on Linux, but the
+host Ollama server must accept connections from the Docker bridge. For example,
+run Ollama with `OLLAMA_HOST=0.0.0.0:11434` and restrict port 11434 with the
+host firewall.
+
+Useful lifecycle commands:
+
+```bash
+docker compose logs -f
+docker compose down
+docker compose down --volumes  # permanently deletes stored chats and secrets
+```
+
+Do not expose the included gateway on a network: its fixed local identity is
+only suitable for a single-user machine. For a server deployment, keep the app
+behind an authenticating reverse proxy that overwrites the `X-Remote-*`
+headers, or configure the existing LDAPS authentication mode. Set production
+secrets explicitly and use HTTPS as described in the deployment checklist.
+
 ## Optional PostgreSQL backend
 
 Set `STORAGE_BACKEND=postgresql`, configure `DATABASE_URL`, and apply:
