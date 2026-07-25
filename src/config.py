@@ -22,7 +22,10 @@ class Settings(BaseSettings):
     ENCRYPTED_STORAGE_KEY: SecretStr | None = None
     CHAINLIT_AUTH_SECRET: SecretStr | None = None
     CHAINLIT_URL: AnyHttpUrl = AnyHttpUrl("http://localhost:8000")
-    AUTH_MODE: Literal["ldap", "header"] = "ldap"
+    AUTH_MODE: Literal["ldap", "header", "google"] = "ldap"
+    OAUTH_GOOGLE_CLIENT_ID: str | None = None
+    OAUTH_GOOGLE_CLIENT_SECRET: SecretStr | None = None
+    GOOGLE_ALLOWED_DOMAIN: str | None = None
     TRUSTED_IDENTITY_HEADER: str = "X-Remote-User-ID"
     TRUSTED_UPN_HEADER: str = "X-Remote-User"
     TRUSTED_DISPLAY_NAME_HEADER: str = "X-Remote-Display-Name"
@@ -65,6 +68,8 @@ class Settings(BaseSettings):
     LDAP_CONNECT_TIMEOUT: float = Field(10, gt=0)
     LDAP_AUTH_RATE_LIMIT: int = Field(5, ge=1)
     LDAP_AUTH_RATE_WINDOW_SECONDS: int = Field(60, ge=1)
+    METRICS_ENABLED: bool = False
+    METRICS_AUTH_TOKEN: SecretStr | None = None
     LOG_USER_HASH_SALT: SecretStr | None = None
 
     @field_validator("DATABASE_URL")
@@ -114,6 +119,17 @@ class Settings(BaseSettings):
                 }.items()
                 if not value
             )
+        if self.AUTH_MODE == "google":
+            missing.extend(
+                name
+                for name, value in {
+                    "OAUTH_GOOGLE_CLIENT_ID": self.OAUTH_GOOGLE_CLIENT_ID,
+                    "OAUTH_GOOGLE_CLIENT_SECRET": self.OAUTH_GOOGLE_CLIENT_SECRET,
+                }.items()
+                if not value
+            )
+        if self.METRICS_ENABLED and self.METRICS_AUTH_TOKEN is None:
+            missing.append("METRICS_AUTH_TOKEN")
         if missing:
             raise ValueError(
                 "Missing required production settings: " + ", ".join(missing)

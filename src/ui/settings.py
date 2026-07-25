@@ -5,14 +5,6 @@ from chainlit.input_widget import Select, Slider, Switch, TextInput
 
 from src.memory.models import MemoryPreferences
 
-
-PROVIDER_MODELS = {
-    "Ollama · Connected": ["Local chat model"],
-    "ChatGPT · Setup required": ["Default ChatGPT model · Preview"],
-    "Claude · Setup required": ["Default Claude model · Preview"],
-    "Gemini · Setup required": ["Default Gemini model · Preview"],
-}
-
 PERSONALITY_OPTIONS = [
     "Default · Clear and neutral",
     "Professional · Polished and precise",
@@ -25,8 +17,6 @@ PERSONALITY_OPTIONS = [
 
 def default_chat_preferences(preferences: MemoryPreferences) -> dict[str, Any]:
     return {
-        "model_provider": "Ollama · Connected",
-        "provider_model": "Local chat model",
         "personality": PERSONALITY_OPTIONS[0],
         "response_detail": "Balanced",
         "response_language": "Automatic",
@@ -45,34 +35,10 @@ def default_chat_preferences(preferences: MemoryPreferences) -> dict[str, Any]:
 
 async def send_memory_settings(
     preferences: MemoryPreferences,
-    selected_provider: str = "Ollama · Connected",
     current: dict[str, Any] | None = None,
 ) -> None:
     values = default_chat_preferences(preferences) | (current or {})
-    values["model_provider"] = selected_provider
-    models = PROVIDER_MODELS.get(
-        selected_provider, PROVIDER_MODELS["Ollama · Connected"]
-    )
     inputs: list[Any] = [
-        Select(
-            id="model_provider",
-            label="Provider",
-            values=list(PROVIDER_MODELS),
-            initial=selected_provider,
-            description="Choose where this conversation should run.",
-        ),
-        Select(
-            id="provider_model",
-            label="Model",
-            values=models,
-            initial=models[0],
-            disabled=not selected_provider.startswith("Ollama"),
-            description=(
-                "Active local model."
-                if selected_provider.startswith("Ollama")
-                else "Preview only. Add provider credentials to enable this."
-            ),
-        ),
         Select(
             id="personality",
             label="Personalization · Base style and tone",
@@ -115,7 +81,7 @@ async def send_memory_settings(
             id="show_thinking",
             label="Model · Show reasoning activity",
             initial=bool(values["show_thinking"]),
-            description="Shows the animated three-line reasoning reel.",
+            description="Shows one transient reasoning line at a time.",
         ),
         Switch(
             id="attachments_enabled",

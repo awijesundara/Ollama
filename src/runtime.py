@@ -7,7 +7,10 @@ from src.chat.summarizer import (
     ThreadSummaryRepository,
 )
 from src.config import Settings, get_settings
-from src.database.chainlit_layer import create_chainlit_data_layer
+from src.database.chainlit_layer import (
+    OwnershipCheckingDataLayer,
+    create_chainlit_data_layer,
+)
 from src.database.connection import Database
 from src.database.encrypted_file_layer import EncryptedFileDataLayer
 from src.memory.conflicts import ConflictDetector
@@ -32,6 +35,7 @@ class ApplicationServices:
             settings.DATABASE_POOL_MAX_SIZE,
         )
         self.file_store: EncryptedUserStore | None = None
+        self.data_layer: EncryptedFileDataLayer | OwnershipCheckingDataLayer
         if settings.STORAGE_BACKEND == "encrypted_files":
             if settings.ENCRYPTED_STORAGE_KEY is None:
                 raise RuntimeError(

@@ -10,6 +10,11 @@ from src.auth.ad_auth import (
     AuthenticationRateLimited,
     LDAPConfig,
 )
+from src.auth.identity import (
+    AuthenticationError,
+    identity_from_google_claims,
+    trusted_header_value,
+)
 from src.chat import handlers
 from src.config import get_settings
 from src.http_endpoints import register_http_endpoints
@@ -69,15 +74,52 @@ async def password_auth(username: str, password: str) -> cl.User | None:
 def header_auth(headers: dict[str, str]) -> cl.User | None:
     if settings.AUTH_MODE != "header":
         return None
-    identifier = headers.get(settings.TRUSTED_IDENTITY_HEADER, "").strip()
-    if not identifier or any(character in identifier for character in "\r\n"):
+    try:
+        identifier = trusted_header_value(
+            headers.get(settings.TRUSTED_IDENTITY_HEADER),
+            required=True,
+        )
+        upn = trusted_header_value(headers.get(settings.TRUSTED_UPN_HEADER))
+        display_name = trusted_header_value(
+            headers.get(settings.TRUSTED_DISPLAY_NAME_HEADER)
+        )
+    except AuthenticationError:
+        return None
+    if identifier is None:
         return None
     return cl.User(
         identifier=identifier,
         metadata={
-            "upn": headers.get(settings.TRUSTED_UPN_HEADER),
-            "display_name": headers.get(settings.TRUSTED_DISPLAY_NAME_HEADER),
+            "upn": upn,
+            "display_name": display_name,
             "provider": "trusted-proxy",
+        },
+    )
+
+
+@cl.oauth_callback
+def oauth_auth(
+    provider_id: str,
+    token: str,
+    raw_user_data: dict[str, Any],
+    default_user: cl.User,
+) -> cl.User | None:
+    del token, default_user
+    if settings.AUTH_MODE != "google" or provider_id != "google":
+        return None
+    try:
+        identity = identity_from_google_claims(
+            raw_user_data,
+            allowed_domain=settings.GOOGLE_ALLOWED_DOMAIN,
+        )
+    except AuthenticationError:
+        return None
+    return cl.User(
+        identifier=identity.user_identifier,
+        metadata={
+            "upn": identity.upn,
+            "display_name": identity.display_name,
+            "provider": "google",
         },
     )
 

@@ -13,6 +13,8 @@ is recorded in [`ASSESSMENT.md`](ASSESSMENT.md).
 
 - Windows AD authentication over certificate-validated LDAPS, using
   `objectGUID` as the immutable ownership key.
+- Google OAuth authentication compatible with passkeys protected by Windows
+  Hello, iCloud Keychain, Google Password Manager, or hardware security keys.
 - Trusted reverse-proxy header authentication as an alternative deployment
   mode.
 - Chainlit 2.11+ ChatGPT-style web UI with searchable history, new chat,
@@ -75,6 +77,10 @@ Production validation requires HTTPS, a Chainlit authentication secret, a
 user-hash salt and—when `AUTH_MODE=ldap`—LDAPS, a base DN, and CA file.
 `MEMORY_AUTO_EXTRACTION=false` is the safe default.
 
+Prometheus metrics are disabled by default. To expose them, set
+`METRICS_ENABLED=true` and a strong `METRICS_AUTH_TOKEN`, keep `/metrics`
+network-restricted, and send the token as an `Authorization: Bearer` header.
+
 ### Encrypted file storage
 
 This is the default backend:
@@ -110,6 +116,40 @@ with `objectGUID`.
 Set `AUTH_MODE=header`. Only use this when Chainlit listens on loopback or a
 private socket and the proxy overwrites the configured identity headers.
 Never expose the Chainlit port directly to clients.
+
+### Google passkey mode
+
+Set `AUTH_MODE=google` and create a Google OAuth 2.0 Web application. Configure
+its authorized redirect URI as:
+
+```text
+https://your-app.example/auth/oauth/google/callback
+```
+
+Then set:
+
+```text
+CHAINLIT_URL=https://your-app.example
+OAUTH_GOOGLE_CLIENT_ID=<google-client-id>
+OAUTH_GOOGLE_CLIENT_SECRET=<google-client-secret>
+GOOGLE_ALLOWED_DOMAIN=example.com
+```
+
+Leave `GOOGLE_ALLOWED_DOMAIN` empty to allow verified consumer Google accounts
+as well as Workspace accounts. Users can create and manage a passkey in their
+Google Account and authenticate with Windows Hello, Touch ID/iCloud Keychain,
+Google Password Manager, or a hardware security key. The private passkey never
+reaches this application; Google performs authentication and the app uses the
+verified immutable Google account subject as its ownership identifier.
+
+Google may offer an account recovery or alternative authentication method when
+a passkey is unavailable. Enforce stronger sign-in requirements through Google
+Workspace policy when the deployment requires them.
+
+Changing an existing deployment from LDAP or header authentication changes
+user identifiers. Migrate existing ownership records to the corresponding
+`google:<subject>` identifiers before switching production traffic, otherwise
+existing chats and memories will appear under the former identity.
 
 ## Installation
 
@@ -166,9 +206,8 @@ deployment with `SHOW_MODEL_THINKING=false`.
 
 Every completed assistant response includes a **Download PDF** action. Users
 can also type `/pdf`, `/pdf <custom text>`, or ask naturally to convert the
-latest answer into a PDF. The settings sidebar shows Ollama as the active local
-provider; ChatGPT, Gemini, and Claude appear as disabled **Coming soon**
-providers until their API integrations are configured.
+latest answer into a PDF. The settings sidebar exposes only working local
+features and does not present unavailable model providers.
 
 Docker Desktop on macOS and Windows resolves `host.docker.internal`
 automatically. The Compose file also provides the hostname on Linux, but the
