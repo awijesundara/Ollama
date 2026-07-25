@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from dataclasses import asdict, is_dataclass
 from datetime import UTC, datetime
 from typing import Any, cast
@@ -25,6 +26,9 @@ class EncryptedFileDataLayer(BaseDataLayer):
 
     def __init__(self, store: EncryptedUserStore) -> None:
         self.store = store
+        self._thread_owners: OrderedDict[str, str] = OrderedDict()
+        self._user_owners: OrderedDict[str, str] = OrderedDict()
+        self._owner_cache_limit = 10_000
 
     async def get_user(self, identifier: str) -> PersistedUser | None:
         document = await self.store.read_user(identifier)
@@ -57,6 +61,7 @@ class EncryptedFileDataLayer(BaseDataLayer):
             return dict(current)
 
         saved = await self.store.mutate_user(user.identifier, create)
+        self._remember(self._user_owners, saved["id"], user.identifier)
         return PersistedUser(
             id=saved["id"],
             identifier=saved["identifier"],
@@ -179,6 +184,7 @@ class EncryptedFileDataLayer(BaseDataLayer):
             document["summaries"].pop(thread_id, None)
 
         await self.store.mutate_user(owner, delete)
+        self._thread_owners.pop(thread_id, None)
 
     async def list_threads(
         self,
@@ -190,8 +196,13 @@ class EncryptedFileDataLayer(BaseDataLayer):
         owner = await self.store.find_user_by_id(filters.userId)
         if owner is None:
             return _empty_page()
+        self._remember(self._user_owners, filters.userId, owner)
         document = await self.store.read_user(owner)
         threads = list(document["threads"].values())
+        for thread in threads:
+            thread_id = thread.get("id")
+            if isinstance(thread_id, str):
+                self._remember(self._thread_owners, thread_id, owner)
         if filters.search:
             query = filters.search.casefold()
             threads = [
@@ -230,11 +241,17 @@ class EncryptedFileDataLayer(BaseDataLayer):
         )
 
     async def get_thread(self, thread_id: str) -> ThreadDict | None:
-        owner = await self.store.find_thread_owner(thread_id)
+        owner = self._cached(self._thread_owners, thread_id)
+        if owner is None:
+            owner = await self.store.find_thread_owner(thread_id)
         if owner is None:
             return None
+        self._remember(self._thread_owners, thread_id, owner)
         document = await self.store.read_user(owner)
-        thread = document["threads"][thread_id]
+        thread = document["threads"].get(thread_id)
+        if thread is None:
+            self._thread_owners.pop(thread_id, None)
+            return None
         feedback_by_step = {
             str(item.get("forId")): item
             for item in thread.get("feedbacks", {}).values()
@@ -263,13 +280,20 @@ class EncryptedFileDataLayer(BaseDataLayer):
         metadata: dict[str, Any] | None = None,
         tags: list[str] | None = None,
     ) -> None:
-        owner = (
-            await self.store.find_user_by_id(user_id)
-            if user_id
-            else await self.store.find_thread_owner(thread_id)
-        )
+        owner = None
+        if user_id:
+            owner = self._cached(self._user_owners, user_id)
+            if owner is None:
+                owner = await self.store.find_user_by_id(user_id)
+        else:
+            owner = self._cached(self._thread_owners, thread_id)
+            if owner is None:
+                owner = await self.store.find_thread_owner(thread_id)
         if owner is None:
             raise PermissionError("Thread owner is unavailable")
+        self._remember(self._thread_owners, thread_id, owner)
+        if user_id:
+            self._remember(self._user_owners, user_id, owner)
         now = datetime.now(UTC).isoformat()
 
         def update(document: Document) -> None:
@@ -327,10 +351,27 @@ class EncryptedFileDataLayer(BaseDataLayer):
     async def _require_owner(self, thread_id: str) -> str:
         if not thread_id:
             raise PermissionError("Thread is unavailable")
-        owner = await self.store.find_thread_owner(thread_id)
+        owner = self._cached(self._thread_owners, thread_id)
+        if owner is None:
+            owner = await self.store.find_thread_owner(thread_id)
         if owner is None:
             raise PermissionError("Thread is unavailable")
+        self._remember(self._thread_owners, thread_id, owner)
         return owner
+
+    def _cached(self, cache: OrderedDict[str, str], key: str) -> str | None:
+        value = cache.get(key)
+        if value is not None:
+            cache.move_to_end(key)
+        return value
+
+    def _remember(
+        self, cache: OrderedDict[str, str], key: str, owner: str
+    ) -> None:
+        cache[key] = owner
+        cache.move_to_end(key)
+        if len(cache) > self._owner_cache_limit:
+            cache.popitem(last=False)
 
 
 def _sanitize_step(step: StepDict) -> dict[str, Any]:

@@ -274,7 +274,10 @@ async def on_message(message: cl.Message) -> None:
                     completed = format_thinking_text(
                         thinking_text, include_incomplete=False
                     )
-                    if completed != rendered_thinking and "Working through" not in completed:
+                    if (
+                        completed != rendered_thinking
+                        and "Working through" not in completed
+                    ):
                         thinking_message.content = completed
                         await thinking_message.update()
                         rendered_thinking = completed
@@ -360,24 +363,8 @@ async def on_settings_update(settings: dict[str, Any]) -> None:
     identity = get_authenticated_identity()
     if not await _ensure_services():
         return
-    selected_provider = str(settings.get("model_provider", "Ollama · Connected"))
     current = _chat_preferences() | settings
     cl.user_session.set("chat_preferences", current)
-    cl.user_session.set("provider_preview", selected_provider)
-    if not selected_provider.startswith("Ollama"):
-        await send_memory_settings(
-            await services.require_memory().get_preferences(identity),
-            selected_provider,
-            current,
-        )
-        await cl.Message(
-            content=(
-                f"**{selected_provider.split(' ·', 1)[0]} is a UI preview.** "
-                "This conversation will continue using Ollama until its API "
-                "credentials and adapter are configured."
-            )
-        ).send()
-        return
     preference_fields = {
         key: bool(settings[key])
         for key in (
@@ -406,33 +393,6 @@ async def on_settings_update(settings: dict[str, Any]) -> None:
             )
         )
     await cl.Message(content="Settings saved.").send()
-
-
-async def show_provider_preview(provider: str) -> None:
-    identity = get_authenticated_identity()
-    selected = (
-        "Ollama · Connected"
-        if provider == "Ollama"
-        else f"{provider} · Setup required"
-    )
-    await send_memory_settings(
-        await services.require_memory().get_preferences(identity),
-        selected,
-        _chat_preferences(),
-    )
-    if provider == "Ollama":
-        await cl.Message(
-            content="**Ollama is connected** and handling this conversation locally."
-        ).send()
-        return
-    await cl.Message(
-        content=(
-            f"**{provider} integration preview**\n\n"
-            "The provider and model controls are ready in Chat Settings. "
-            "API authentication and request routing are intentionally disabled "
-            "until credentials are configured."
-        )
-    ).send()
 
 
 async def view_memories() -> None:

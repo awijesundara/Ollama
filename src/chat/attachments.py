@@ -130,7 +130,7 @@ async def _read_element(element: Any, max_file_bytes: int) -> bytes:
             raise AttachmentError(f"Cannot access {_element_name(element)}.")
         path = Path(str(path_value))
         try:
-            size = path.stat().st_size
+            size = await asyncio.to_thread(lambda: path.stat().st_size)
         except OSError as error:
             raise AttachmentError(
                 f"Cannot access {_element_name(element)}."

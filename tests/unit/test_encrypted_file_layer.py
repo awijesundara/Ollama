@@ -63,3 +63,20 @@ async def test_encrypted_layer_rejects_cross_user_thread_access(tmp_path) -> Non
 
     with pytest.raises(PermissionError):
         await layer.require_thread_owner("thread-1", "bob")
+
+
+@pytest.mark.asyncio
+async def test_encrypted_layer_caches_thread_owner_after_creation(
+    tmp_path, monkeypatch
+) -> None:
+    key = base64.b64encode(b"h" * 32).decode()
+    store = EncryptedUserStore(str(tmp_path), key)
+    layer = EncryptedFileDataLayer(store)
+    alice = await layer.create_user(User(identifier="alice", metadata={}))
+    await layer.update_thread("thread-1", user_id=alice.id)
+
+    async def unexpected_lookup(_: str) -> str | None:
+        raise AssertionError("thread owner lookup should have been cached")
+
+    monkeypatch.setattr(store, "find_thread_owner", unexpected_lookup)
+    assert await layer.get_thread_author("thread-1") == "alice"

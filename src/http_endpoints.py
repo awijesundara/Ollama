@@ -1,5 +1,7 @@
+import secrets
+
 import asyncpg
-from fastapi import Response, status
+from fastapi import Request, Response, status
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from src.runtime import services
@@ -29,5 +31,18 @@ def register_http_endpoints(app: object) -> None:
     @app.get(  # type: ignore[attr-defined,untyped-decorator]
         "/metrics", include_in_schema=False
     )
-    async def metrics() -> Response:
+    async def metrics(request: Request) -> Response:
+        if not services.settings.METRICS_ENABLED:
+            return Response(status_code=status.HTTP_404_NOT_FOUND)
+        expected = services.settings.METRICS_AUTH_TOKEN
+        authorization = request.headers.get("authorization", "")
+        supplied = (
+            authorization.removeprefix("Bearer ").strip()
+            if authorization.startswith("Bearer ")
+            else ""
+        )
+        if expected is None or not secrets.compare_digest(
+            supplied, expected.get_secret_value()
+        ):
+            return Response(status_code=status.HTTP_401_UNAUTHORIZED)
         return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)

@@ -77,6 +77,8 @@ module = [
   "ldap3",
   "ldap3.*",
   "prometheus_client",
+  "reportlab",
+  "reportlab.*",
   "yaml",
 ]
 ignore_missing_imports = true
@@ -96,4 +98,9 @@ disable_error_code = ["misc"]
 
 [[tool.mypy.overrides]]
 module = "src.database.encrypted_file_layer"
-disable_error_code = ["misc", "untyped-decorator"]
+disable_error_code = [
+  "attr-defined",
+  "misc",
+  "no-untyped-call",
+  "untyped-decorator",
+]

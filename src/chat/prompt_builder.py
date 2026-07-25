@@ -17,8 +17,7 @@ APPLICATION_CAPABILITIES = """Application capabilities:
 - The application can create a downloadable PDF from your latest response.
 - If asked to make the latest answer a PDF, do not provide manual instructions;
   the application handles the export directly.
-- Ollama is the active provider. ChatGPT, Gemini, and Claude are planned but
-  currently disabled."""
+- Ollama is the active local model provider."""
 
 
 @dataclass(frozen=True, slots=True)
