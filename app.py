@@ -97,7 +97,6 @@ def header_auth(headers: dict[str, str]) -> cl.User | None:
     )
 
 
-@cl.oauth_callback
 def oauth_auth(
     provider_id: str,
     token: str,
@@ -122,6 +121,10 @@ def oauth_auth(
             "provider": "google",
         },
     )
+
+
+if settings.AUTH_MODE == "google":
+    cl.oauth_callback(oauth_auth)
 
 
 @cl.on_chat_start

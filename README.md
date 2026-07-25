@@ -27,7 +27,8 @@ is recorded in [`ASSESSMENT.md`](ASSESSMENT.md).
 - Secret, credential, prompt-injection, duplicate, length, scope, and per-user
   limit checks.
 - Conversation summarization and configurable recent-message context.
-- PDF, DOCX, text, structured-text, source-code, and image attachments.
+- PDF, Word, PowerPoint, Excel, OpenDocument, EPUB, email, text, source-code,
+  notebook, and image attachments.
 - Live, transient model reasoning separated from the final answer.
 - Native downloadable PDF export for assistant responses.
 - Automatic structured memory extraction, disabled by default and gated by
@@ -192,15 +193,21 @@ model separately:
 OLLAMA_VISION_MODEL=qwen3.5:latest docker compose up --build -d
 ```
 
-The upload pipeline accepts PDF, DOCX, TXT, Markdown, CSV, JSON, YAML,
-HTML/XML, common source-code formats, PNG, JPEG, WebP, and GIF. Text is
-extracted into the model prompt. Images are validated and sent only to the
-vision model. Raw uploads are not added to the encrypted history; extracted
-text and model responses are stored as conversation content. The defaults
-allow 10 files of up to 10 MB each and at most 100,000 extracted characters.
+The upload pipeline accepts PDF, DOCX, PPTX, XLSX, OpenDocument files, EPUB,
+EML, RTF, notebooks, text and structured data, common source-code formats,
+bounded ZIP/TAR/GZIP archives, and common raster images including PNG, JPEG,
+WebP, GIF, TIFF, BMP, HEIC, HEIF, and AVIF. Text is extracted into the model
+prompt. Archives are inspected in memory with member-count and expanded-size
+limits; nested archives and unreadable binary members are skipped. Images are
+orientation-corrected, resized when needed, and normalized to optimized JPEG
+or PNG before being sent to the vision model. Raw uploads are not added to
+the encrypted history; extracted text and model responses are stored as
+conversation content. The defaults allow 10 files of up to 10 MB each and at
+most 100,000 extracted characters.
 
-When Ollama returns a `thinking` stream, the UI displays it live in a temporary
-**AI is thinking** chat bubble. The bubble is removed as soon as the final
+The UI renders truthful task activity such as **Reading uploaded files…** or
+**Analyzing uploaded image…** as a low-contrast ghost row. Private model
+reasoning is never rendered. The activity disappears shortly after the final
 answer begins, keeping the saved conversation clean. Disable this per
 deployment with `SHOW_MODEL_THINKING=false`.
 

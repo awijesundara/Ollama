@@ -43,7 +43,7 @@ from src.ui.actions import confirm_destructive_action, send_json_export
 from src.ui.greetings import choose_greeting
 from src.ui.pdf_export import explicit_pdf_text, is_pdf_export_request, render_pdf
 from src.ui.settings import default_chat_preferences, send_memory_settings
-from src.ui.thinking import format_thinking_text, thinking_display_seconds
+from src.ui.thinking import GHOST_ACTIVITY_LINGER_SECONDS, format_activity_text
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +113,11 @@ async def on_message(message: cl.Message) -> None:
     chat_preferences = _chat_preferences()
     image_payloads: list[str] = []
     elements = list(message.elements or [])
+    activity_message: cl.Message | None = None
+    show_activity = (
+        services.settings.SHOW_MODEL_THINKING
+        and chat_preferences["show_thinking"]
+    )
     if elements:
         if (
             not services.settings.ATTACHMENTS_ENABLED
@@ -120,6 +125,14 @@ async def on_message(message: cl.Message) -> None:
         ):
             await cl.Message(content="File attachments are disabled.").send()
             return
+        if show_activity:
+            activity_message = cl.Message(
+                content=format_activity_text("Reading uploaded files"),
+                author="Private Ollama",
+                metadata={"transient": True, "activity": True},
+                tags=["transient-thinking", "ghost-activity"],
+            )
+            await activity_message.send()
         try:
             processed = await process_attachments(
                 elements,
@@ -130,6 +143,8 @@ async def on_message(message: cl.Message) -> None:
                 max_extracted_chars=services.settings.ATTACHMENT_MAX_EXTRACTED_CHARS,
             )
         except AttachmentError as error:
+            if activity_message is not None:
+                await activity_message.remove()
             await cl.Message(content=str(error)).send()
             return
         if processed.text:
@@ -142,22 +157,42 @@ async def on_message(message: cl.Message) -> None:
             ).strip()
         if processed.images:
             if not chat_preferences["image_analysis_enabled"]:
+                if activity_message is not None:
+                    await activity_message.remove()
                 await cl.Message(
                     content="Image analysis is disabled in Chat Settings."
                 ).send()
                 return
             if not services.settings.OLLAMA_VISION_MODEL:
+                if activity_message is not None:
+                    await activity_message.remove()
                 await cl.Message(
                     content="Image processing is not configured on this server."
                 ).send()
                 return
             image_payloads = processed.images
+            if activity_message is not None:
+                activity_message.content = format_activity_text(
+                    "Analyzing uploaded image"
+                    if len(processed.images) == 1
+                    else f"Analyzing {len(processed.images)} uploaded images"
+                )
+                await activity_message.update()
             if not prompt_content:
                 prompt_content = "Describe and analyze the attached image."
+        elif activity_message is not None:
+            activity_message.content = format_activity_text(
+                "Reviewing uploaded documents"
+            )
+            await activity_message.update()
     if not prompt_content:
+        if activity_message is not None:
+            await activity_message.remove()
         await cl.Message(content="Enter a message or attach a supported file.").send()
         return
     if detect_secret(prompt_content):
+        if activity_message is not None:
+            await activity_message.remove()
         await cl.Message(
             content="This message appears to contain a credential or secret. "
             "It was redacted from persistence and was not sent to the model."
@@ -166,6 +201,8 @@ async def on_message(message: cl.Message) -> None:
     if estimate_tokens(prompt_content) > (
         services.settings.OLLAMA_CONTEXT_LENGTH - 2048
     ):
+        if activity_message is not None:
+            await activity_message.remove()
         await cl.Message(
             content="This message is too large for the configured model context. "
             "Please send a smaller excerpt."
@@ -193,6 +230,14 @@ async def on_message(message: cl.Message) -> None:
     except ValueError as error:
         await cl.Message(content=str(error)).send()
         return
+    if show_activity and activity_message is None:
+        activity_message = cl.Message(
+            content=format_activity_text("Preparing response"),
+            author="Private Ollama",
+            metadata={"transient": True, "activity": True},
+            tags=["transient-thinking", "ghost-activity"],
+        )
+        await activity_message.send()
 
     retrieved = await services.require_retriever().retrieve(
         identity, state.thread_id, prompt_content
@@ -246,18 +291,7 @@ async def on_message(message: cl.Message) -> None:
     ]
     response = cl.Message(content="")
     response_started = False
-    thinking_message: cl.Message | None = None
-    thinking_text = ""
-    rendered_thinking = ""
-    thinking_removal: asyncio.Task[None] | None = None
-    if services.settings.SHOW_MODEL_THINKING and chat_preferences["show_thinking"]:
-        thinking_message = cl.Message(
-            content="**Thinking**\n\nWorking through this…",
-            author="Private Ollama",
-            metadata={"transient": True},
-            tags=["transient-thinking"],
-        )
-        await thinking_message.send()
+    activity_removal: asyncio.Task[None] | None = None
     try:
         async for chunk in services.ollama.stream_chat_events(
             ollama_messages,
@@ -268,46 +302,34 @@ async def on_message(message: cl.Message) -> None:
             ),
             temperature=float(chat_preferences["temperature"]),
         ):
-            if chunk.thinking and chat_preferences["show_thinking"]:
-                thinking_text += chunk.thinking
-                if thinking_message is not None:
-                    completed = format_thinking_text(
-                        thinking_text, include_incomplete=False
-                    )
-                    if (
-                        completed != rendered_thinking
-                        and "Working through" not in completed
-                    ):
-                        thinking_message.content = completed
-                        await thinking_message.update()
-                        rendered_thinking = completed
             if chunk.content:
-                if thinking_message is not None:
-                    if thinking_text.strip():
-                        thinking_message.content = format_thinking_text(thinking_text)
-                        await thinking_message.update()
-                    thinking_removal = asyncio.create_task(
+                if activity_message is not None:
+                    activity_message.content = format_activity_text(
+                        "Response ready"
+                    )
+                    await activity_message.update()
+                    activity_removal = asyncio.create_task(
                         _remove_thinking_message(
-                            thinking_message,
-                            thinking_display_seconds(thinking_text),
+                            activity_message,
+                            GHOST_ACTIVITY_LINGER_SECONDS,
                         )
                     )
-                    thinking_message = None
+                    activity_message = None
                 if not response_started:
                     await response.send()
                     response_started = True
                 await response.stream_token(chunk.content)
-        if thinking_message is not None:
-            await thinking_message.remove()
-            thinking_message = None
+        if activity_message is not None:
+            await activity_message.remove()
+            activity_message = None
         if not response_started:
             response.content = "The model completed without returning an answer."
             await response.send()
             response_started = True
         await response.update()
     except OllamaModelNotFoundError:
-        if thinking_message is not None:
-            await thinking_message.remove()
+        if activity_message is not None:
+            await activity_message.remove()
         response.content = (
             "The configured model is unavailable. Contact an administrator."
         )
@@ -318,8 +340,8 @@ async def on_message(message: cl.Message) -> None:
         return
 
     except OllamaUnavailableError:
-        if thinking_message is not None:
-            await thinking_message.remove()
+        if activity_message is not None:
+            await activity_message.remove()
         response.content = "The model service is temporarily unavailable. Please retry."
         if response_started:
             await response.update()
@@ -327,8 +349,7 @@ async def on_message(message: cl.Message) -> None:
             await response.send()
         return
 
-    if thinking_removal is not None:
-        await thinking_removal
+    del activity_removal
 
     state.messages.extend(
         [

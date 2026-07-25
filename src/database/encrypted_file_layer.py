@@ -103,7 +103,7 @@ class EncryptedFileDataLayer(BaseDataLayer):
         return False
 
     async def create_element(self, element_dict: ElementDict) -> None:
-        value = dict(element_dict)
+        value = _to_dict(element_dict)
         thread_id = str(value.get("threadId") or "")
         owner = await self._require_owner(thread_id)
         element_id = str(value["id"])
