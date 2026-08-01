@@ -39,7 +39,9 @@ dev = [
   "pytest>=8.3,<9",
   "pytest-asyncio>=0.25,<1",
   "ruff>=0.9,<1",
+  "types-defusedxml>=0.1,<1",
   "types-ldap3>=2.9,<3",
+  "types-openpyxl>=3.1,<4",
   "types-PyYAML>=6.0,<7",
 ]
 
@@ -80,6 +82,7 @@ module = [
   "httpx",
   "ldap3",
   "ldap3.*",
+  "pillow_heif",
   "prometheus_client",
   "reportlab",
   "reportlab.*",

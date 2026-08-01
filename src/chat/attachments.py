@@ -289,8 +289,8 @@ def _extract_text(name: str, mime: str, payload: bytes) -> str:
         except json.JSONDecodeError:
             return text
     if extension == ".csv":
-        rows = csv.reader(io.StringIO(text))
-        return "\n".join(" | ".join(cell for cell in row) for row in rows)
+        csv_rows = csv.reader(io.StringIO(text))
+        return "\n".join(" | ".join(cell for cell in row) for row in csv_rows)
     return text
 
 
@@ -372,36 +372,42 @@ def _extract_archive(name: str, payload: bytes) -> str:
         expanded_bytes = 0
         if lower_name.endswith(".zip"):
             with zipfile.ZipFile(io.BytesIO(payload)) as archive:
-                entries = [item for item in archive.infolist() if not item.is_dir()]
-                if len(entries) > _MAX_ARCHIVE_MEMBERS:
+                zip_entries = [
+                    item for item in archive.infolist() if not item.is_dir()
+                ]
+                if len(zip_entries) > _MAX_ARCHIVE_MEMBERS:
                     raise AttachmentError(
                         f"Archive {name} contains too many files."
                     )
-                for entry in entries:
-                    if entry.flag_bits & 0x1:
+                for zip_entry in zip_entries:
+                    if zip_entry.flag_bits & 0x1:
                         continue
-                    expanded_bytes += entry.file_size
+                    expanded_bytes += zip_entry.file_size
                     if expanded_bytes > _MAX_ARCHIVE_EXPANDED_BYTES:
                         raise AttachmentError(
                             f"Expanded archive {name} is too large."
                         )
-                    members.append((Path(entry.filename).name, archive.read(entry)))
+                    members.append(
+                        (Path(zip_entry.filename).name, archive.read(zip_entry))
+                    )
         else:
             with tarfile.open(fileobj=io.BytesIO(payload), mode="r:*") as archive:
-                entries = [item for item in archive.getmembers() if item.isfile()]
-                if len(entries) > _MAX_ARCHIVE_MEMBERS:
+                tar_entries = [
+                    item for item in archive.getmembers() if item.isfile()
+                ]
+                if len(tar_entries) > _MAX_ARCHIVE_MEMBERS:
                     raise AttachmentError(
                         f"Archive {name} contains too many files."
                     )
-                for entry in entries:
-                    expanded_bytes += entry.size
+                for tar_entry in tar_entries:
+                    expanded_bytes += tar_entry.size
                     if expanded_bytes > _MAX_ARCHIVE_EXPANDED_BYTES:
                         raise AttachmentError(
                             f"Expanded archive {name} is too large."
                         )
-                    source = archive.extractfile(entry)
+                    source = archive.extractfile(tar_entry)
                     if source is not None:
-                        members.append((Path(entry.name).name, source.read()))
+                        members.append((Path(tar_entry.name).name, source.read()))
 
         sections = []
         for member_name, member_payload in members:
