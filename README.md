@@ -5,6 +5,13 @@ generation and encrypted per-user file storage for chat history, personal
 memory, summaries, preferences, and audit records. PostgreSQL remains an
 optional backend.
 
+This repository is named `Ollama` because it is a client application built
+against the [Ollama](https://github.com/ollama/ollama) HTTP API — it is not a
+fork of, and shares no code or history with, the upstream `ollama/ollama`
+project. Ollama itself is only ever called over HTTP as a stateless model
+server; all of the application logic (auth, storage, memory, UI) here is
+original.
+
 The complete product blueprint and backlog are preserved in
 [`BACKLOG.md`](BACKLOG.md). The original repository was empty; its assessment
 is recorded in [`ASSESSMENT.md`](ASSESSMENT.md).
