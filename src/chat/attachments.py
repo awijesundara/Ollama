@@ -174,9 +174,7 @@ async def _read_element(element: Any, max_file_bytes: int) -> bytes:
         try:
             size = await asyncio.to_thread(lambda: path.stat().st_size)
         except OSError as error:
-            raise AttachmentError(
-                f"Cannot access {_element_name(element)}."
-            ) from error
+            raise AttachmentError(f"Cannot access {_element_name(element)}.") from error
         if size > max_file_bytes:
             raise AttachmentError(
                 f"{_element_name(element)} exceeds the upload size limit."
@@ -238,9 +236,7 @@ def _extract_text(name: str, mime: str, payload: bytes) -> str:
                     if any(values):
                         rows.append(" | ".join(values))
                 if rows:
-                    sheets.append(
-                        f"Sheet: {worksheet.title}\n" + "\n".join(rows)
-                    )
+                    sheets.append(f"Sheet: {worksheet.title}\n" + "\n".join(rows))
             workbook.close()
             return "\n\n".join(sheets)
         except Exception as error:
@@ -311,9 +307,7 @@ def _validate_and_encode_image(payload: bytes) -> str:
             )
             output = io.BytesIO()
             if has_alpha:
-                normalized.convert("RGBA").save(
-                    output, format="PNG", optimize=True
-                )
+                normalized.convert("RGBA").save(output, format="PNG", optimize=True)
             else:
                 normalized.convert("RGB").save(
                     output,
@@ -358,9 +352,7 @@ def _extract_archive(name: str, payload: bytes) -> str:
     """Extract readable members from a bounded archive without writing to disk."""
     try:
         lower_name = name.casefold()
-        if lower_name.endswith(".gz") and not lower_name.endswith(
-            (".tar.gz", ".tgz")
-        ):
+        if lower_name.endswith(".gz") and not lower_name.endswith((".tar.gz", ".tgz")):
             with gzip.GzipFile(fileobj=io.BytesIO(payload)) as archive:
                 expanded = archive.read(_MAX_ARCHIVE_EXPANDED_BYTES + 1)
             if len(expanded) > _MAX_ARCHIVE_EXPANDED_BYTES:
@@ -372,39 +364,27 @@ def _extract_archive(name: str, payload: bytes) -> str:
         expanded_bytes = 0
         if lower_name.endswith(".zip"):
             with zipfile.ZipFile(io.BytesIO(payload)) as archive:
-                zip_entries = [
-                    item for item in archive.infolist() if not item.is_dir()
-                ]
+                zip_entries = [item for item in archive.infolist() if not item.is_dir()]
                 if len(zip_entries) > _MAX_ARCHIVE_MEMBERS:
-                    raise AttachmentError(
-                        f"Archive {name} contains too many files."
-                    )
+                    raise AttachmentError(f"Archive {name} contains too many files.")
                 for zip_entry in zip_entries:
                     if zip_entry.flag_bits & 0x1:
                         continue
                     expanded_bytes += zip_entry.file_size
                     if expanded_bytes > _MAX_ARCHIVE_EXPANDED_BYTES:
-                        raise AttachmentError(
-                            f"Expanded archive {name} is too large."
-                        )
+                        raise AttachmentError(f"Expanded archive {name} is too large.")
                     members.append(
                         (Path(zip_entry.filename).name, archive.read(zip_entry))
                     )
         else:
             with tarfile.open(fileobj=io.BytesIO(payload), mode="r:*") as archive:
-                tar_entries = [
-                    item for item in archive.getmembers() if item.isfile()
-                ]
+                tar_entries = [item for item in archive.getmembers() if item.isfile()]
                 if len(tar_entries) > _MAX_ARCHIVE_MEMBERS:
-                    raise AttachmentError(
-                        f"Archive {name} contains too many files."
-                    )
+                    raise AttachmentError(f"Archive {name} contains too many files.")
                 for tar_entry in tar_entries:
                     expanded_bytes += tar_entry.size
                     if expanded_bytes > _MAX_ARCHIVE_EXPANDED_BYTES:
-                        raise AttachmentError(
-                            f"Expanded archive {name} is too large."
-                        )
+                        raise AttachmentError(f"Expanded archive {name} is too large.")
                     source = archive.extractfile(tar_entry)
                     if source is not None:
                         members.append((Path(tar_entry.name).name, source.read()))
@@ -414,10 +394,9 @@ def _extract_archive(name: str, payload: bytes) -> str:
             if not member_name:
                 continue
             member_lower = member_name.casefold()
-            if (
-                Path(member_lower).suffix in _ARCHIVE_EXTENSIONS
-                or member_lower.endswith(".tar.gz")
-            ):
+            if Path(
+                member_lower
+            ).suffix in _ARCHIVE_EXTENSIONS or member_lower.endswith(".tar.gz"):
                 continue
             try:
                 text = _extract_text(member_name, "", member_payload)

@@ -49,9 +49,7 @@ async def test_validates_and_encodes_image() -> None:
 @pytest.mark.asyncio
 async def test_normalizes_webp_for_ollama_compatibility() -> None:
     buffer = io.BytesIO()
-    Image.new("RGBA", (2, 2), color=(255, 0, 0, 128)).save(
-        buffer, format="WEBP"
-    )
+    Image.new("RGBA", (2, 2), color=(255, 0, 0, 128)).save(buffer, format="WEBP")
 
     result = await process_attachments(
         [

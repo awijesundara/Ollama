@@ -1022,51 +1022,44 @@ class MemoryService:
         self,
         identity: AuthenticatedIdentity,
         request: MemoryCreate,
-    ) -> MemoryRecord:
-        ...
+    ) -> MemoryRecord: ...
 
     async def retrieve_for_prompt(
         self,
         identity: AuthenticatedIdentity,
         thread_id: str,
         query: str,
-    ) -> RetrievedMemory:
-        ...
+    ) -> RetrievedMemory: ...
 
     async def list_memories(
         self,
         identity: AuthenticatedIdentity,
         scope: MemoryScope | None = None,
         thread_id: str | None = None,
-    ) -> list[MemoryRecord]:
-        ...
+    ) -> list[MemoryRecord]: ...
 
     async def delete_memory(
         self,
         identity: AuthenticatedIdentity,
         memory_id: UUID,
-    ) -> bool:
-        ...
+    ) -> bool: ...
 
     async def delete_all_global(
         self,
         identity: AuthenticatedIdentity,
-    ) -> int:
-        ...
+    ) -> int: ...
 
     async def delete_all_thread(
         self,
         identity: AuthenticatedIdentity,
         thread_id: str,
-    ) -> int:
-        ...
+    ) -> int: ...
 
     async def update_preferences(
         self,
         identity: AuthenticatedIdentity,
         update: MemoryPreferenceUpdate,
-    ) -> MemoryPreferences:
-        ...
+    ) -> MemoryPreferences: ...
 ```
 
 The repository layer must require `user_identifier` for all operations.
@@ -1096,24 +1089,20 @@ class OllamaService:
     async def stream_chat(
         self,
         messages: list[ChatMessage],
-    ) -> AsyncIterator[str]:
-        ...
+    ) -> AsyncIterator[str]: ...
 
     async def structured_chat(
         self,
         messages: list[ChatMessage],
         response_schema: type[BaseModel],
-    ) -> BaseModel:
-        ...
+    ) -> BaseModel: ...
 
     async def create_embedding(
         self,
         text: str,
-    ) -> list[float]:
-        ...
+    ) -> list[float]: ...
 
-    async def health_check(self) -> bool:
-        ...
+    async def health_check(self) -> bool: ...
 ```
 
 Requirements:

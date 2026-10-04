@@ -30,7 +30,7 @@ jobs:
       TEST_DATABASE_URL: postgresql://chainlit:test-only-password@localhost:5432/chainlit_test
       APP_ENV: test
       STORAGE_BACKEND: encrypted_files
-      ENCRYPTED_STORAGE_DIR: ${{ runner.temp }}/chainlit-ollama-memory/users
+      ENCRYPTED_STORAGE_DIR: /tmp/chainlit-ollama-memory/users
       ENCRYPTED_STORAGE_KEY: a2tra2tra2tra2tra2tra2tra2tra2tra2tra2tra2s=
     steps:
       - uses: actions/checkout@v4

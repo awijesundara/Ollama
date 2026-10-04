@@ -56,9 +56,7 @@ class OllamaService:
     ) -> AsyncIterator[ChatStreamChunk]:
         payload = {
             "model": model or self._chat_model,
-            "messages": [
-                message.model_dump(exclude_none=True) for message in messages
-            ],
+            "messages": [message.model_dump(exclude_none=True) for message in messages],
             "stream": True,
         }
         if temperature is not None:

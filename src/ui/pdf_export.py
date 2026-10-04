@@ -23,8 +23,10 @@ _PDF_REQUEST = re.compile(
 
 def is_pdf_export_request(text: str) -> bool:
     stripped = text.strip()
-    return stripped == "/pdf" or stripped.startswith("/pdf ") or bool(
-        _PDF_REQUEST.search(stripped)
+    return (
+        stripped == "/pdf"
+        or stripped.startswith("/pdf ")
+        or bool(_PDF_REQUEST.search(stripped))
     )
 
 

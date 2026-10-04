@@ -365,9 +365,7 @@ class EncryptedFileDataLayer(BaseDataLayer):
             cache.move_to_end(key)
         return value
 
-    def _remember(
-        self, cache: OrderedDict[str, str], key: str, owner: str
-    ) -> None:
+    def _remember(self, cache: OrderedDict[str, str], key: str, owner: str) -> None:
         cache[key] = owner
         cache.move_to_end(key)
         if len(cache) > self._owner_cache_limit:

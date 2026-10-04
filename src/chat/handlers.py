@@ -115,8 +115,7 @@ async def on_message(message: cl.Message) -> None:
     elements = list(message.elements or [])
     activity_message: cl.Message | None = None
     show_activity = (
-        services.settings.SHOW_MODEL_THINKING
-        and chat_preferences["show_thinking"]
+        services.settings.SHOW_MODEL_THINKING and chat_preferences["show_thinking"]
     )
     if elements:
         if (
@@ -137,9 +136,7 @@ async def on_message(message: cl.Message) -> None:
             processed = await process_attachments(
                 elements,
                 max_files=services.settings.ATTACHMENT_MAX_FILES,
-                max_file_bytes=services.settings.ATTACHMENT_MAX_FILE_MB
-                * 1024
-                * 1024,
+                max_file_bytes=services.settings.ATTACHMENT_MAX_FILE_MB * 1024 * 1024,
                 max_extracted_chars=services.settings.ATTACHMENT_MAX_EXTRACTED_CHARS,
             )
         except AttachmentError as error:
@@ -295,18 +292,12 @@ async def on_message(message: cl.Message) -> None:
     try:
         async for chunk in services.ollama.stream_chat_events(
             ollama_messages,
-            model=(
-                services.settings.OLLAMA_VISION_MODEL
-                if image_payloads
-                else None
-            ),
+            model=(services.settings.OLLAMA_VISION_MODEL if image_payloads else None),
             temperature=float(chat_preferences["temperature"]),
         ):
             if chunk.content:
                 if activity_message is not None:
-                    activity_message.content = format_activity_text(
-                        "Response ready"
-                    )
+                    activity_message.content = format_activity_text("Response ready")
                     await activity_message.update()
                     activity_removal = asyncio.create_task(
                         _remove_thinking_message(
@@ -434,9 +425,7 @@ async def export_last_response_pdf(text: str | None = None) -> None:
             None,
         )
     if not text:
-        await cl.Message(
-            content="There is no assistant response to export yet."
-        ).send()
+        await cl.Message(content="There is no assistant response to export yet.").send()
         return
     pdf = render_pdf(text)
     await cl.Message(
@@ -687,9 +676,7 @@ def _thread_id() -> str:
     return thread_id
 
 
-async def _remove_thinking_message(
-    message: cl.Message, display_seconds: float
-) -> None:
+async def _remove_thinking_message(message: cl.Message, display_seconds: float) -> None:
     """Leave completed reasoning visible briefly, then dismiss its transient card."""
     await asyncio.sleep(display_seconds)
     await message.remove()
