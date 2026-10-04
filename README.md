@@ -5,6 +5,16 @@ generation and encrypted per-user file storage for chat history, personal
 memory, summaries, preferences, and audit records. PostgreSQL remains an
 optional backend.
 
+[![CI](https://github.com/awijesundara/Ollama/actions/workflows/ci.yml/badge.svg)](https://github.com/awijesundara/Ollama/actions/workflows/ci.yml)
+[![Last commit](https://img.shields.io/github/last-commit/awijesundara/Ollama/main)](https://github.com/awijesundara/Ollama/commits/main)
+[![Top language](https://img.shields.io/github/languages/top/awijesundara/Ollama)](https://github.com/awijesundara/Ollama)
+[![Code size](https://img.shields.io/github/languages/code-size/awijesundara/Ollama)](https://github.com/awijesundara/Ollama)
+[![python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![Chainlit](https://img.shields.io/badge/Chainlit-UI-F80061)](.chainlit)
+[![Ollama](https://img.shields.io/badge/Ollama-local%20models-000000?logo=ollama&logoColor=white)](#)
+[![storage](https://img.shields.io/badge/storage-encrypted%20files%20%7C%20PostgreSQL-4169E1?logo=postgresql&logoColor=white)](#)
+[![type%20checked](https://img.shields.io/badge/type%20checked-mypy-2A6DB2)](pyproject.toml)
+
 This repository is named `Ollama` because it is a client application built
 against the [Ollama](https://github.com/ollama/ollama) HTTP API — it is not a
 fork of, and shares no code or history with, the upstream `ollama/ollama`
@@ -15,16 +25,6 @@ original.
 The complete product blueprint and backlog are preserved in
 [`BACKLOG.md`](BACKLOG.md). The original repository was empty; its assessment
 is recorded in [`ASSESSMENT.md`](ASSESSMENT.md).
-
-[![CI](https://github.com/awijesundara/Ollama/actions/workflows/ci.yml/badge.svg)](https://github.com/awijesundara/Ollama/actions/workflows/ci.yml)
-[![Last commit](https://img.shields.io/github/last-commit/awijesundara/Ollama/main)](https://github.com/awijesundara/Ollama/commits/main)
-[![Top language](https://img.shields.io/github/languages/top/awijesundara/Ollama)](https://github.com/awijesundara/Ollama)
-[![Code size](https://img.shields.io/github/languages/code-size/awijesundara/Ollama)](https://github.com/awijesundara/Ollama)
-[![python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](pyproject.toml)
-[![Chainlit](https://img.shields.io/badge/Chainlit-UI-F80061)](.chainlit)
-[![Ollama](https://img.shields.io/badge/Ollama-local%20models-000000?logo=ollama&logoColor=white)](#)
-[![storage](https://img.shields.io/badge/storage-encrypted%20files%20%7C%20PostgreSQL-4169E1?logo=postgresql&logoColor=white)](#)
-[![type%20checked](https://img.shields.io/badge/type%20checked-mypy-2A6DB2)](pyproject.toml)
 
 ## Capabilities
 
@@ -355,6 +355,6 @@ for the backup and recovery procedure.
 | Lines of code (non-blank) | 6,014 |
 | Languages | Python 5,769, YAML 113, CSS 80, Shell 26, JavaScript 26 |
 | Automated tests | 50 |
-| Commits | 12 |
+| Commits | 13 |
 
 CI runs formatting, lint and mypy checks, then the test suite and an Alembic upgrade, downgrade and re-upgrade against PostgreSQL with pgvector on each push to `main`.
